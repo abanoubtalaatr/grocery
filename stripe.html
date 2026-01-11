@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stripe Saved Cards Test with Bearer Token</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; }
+    h1, h2 { text-align: center; }
+    button { margin-top: 10px; padding: 8px 16px; cursor: pointer; }
+    #card-element { padding: 10px; border: 1px solid #ccc; border-radius: 4px; margin-top: 5px; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+    li button { margin-left: 5px; }
+    #card-form-container { margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<h1>Stripe Saved Cards Test</h1>
+
+<!-- Add New Card -->
+<button id="add-card-btn">Add New Card</button>
+<div id="card-form-container" style="display:none;">
+  <form id="card-form">
+    <div id="card-element"></div>
+    <button type="submit">Save Card</button>
+  </form>
+</div>
+
+<!-- Saved Cards List -->
+<h2>Your Saved Cards</h2>
+<ul id="cards-list"></ul>
+
+<script>
+// Replace with your Stripe public key
+const stripe = Stripe("pk_test_51HkPEHKcWzfJufI6DFjtyvoweGro9bcb7Z2fnKl9zFRGsGBsWQw87woO470Qnr90Grclz54Q5Tmr2w7eCESCTljB005MGf6hM5"); 
+
+// Replace with your Bearer token
+const BEARER_TOKEN = "10|UyFpOw8XyOKcfzpAVPA9KcUBWZ56zUx7ixhgJYER517064ba";
+
+// Helper function to call API with Bearer token
+async function apiFetch(url, options = {}) {
+  options.headers = options.headers || {};
+  options.headers['Authorization'] = `Bearer ${BEARER_TOKEN}`;
+  options.headers['Accept'] = 'application/json';
+  options.credentials = 'include';
+  return fetch(url, options).then(res => res.json());
+}
+
+// Show/hide Add Card form
+document.getElementById('add-card-btn').addEventListener('click', () => {
+  const container = document.getElementById('card-form-container');
+  container.style.display = container.style.display === 'none' ? 'block' : 'none';
+});
+
+// Load saved cards
+async function loadCards() {
+  try {
+    const cards = await apiFetch('http://127.0.0.1:8000/api/cards');
+    const list = document.getElementById('cards-list');
+    list.innerHTML = '';
+
+    cards.forEach(c => {
+      const li = document.createElement('li');
+      li.textContent = `${c.card.brand.toUpperCase()} **** ${c.card.last4} (Exp: ${c.card.exp_month}/${c.card.exp_year})`;
+
+      const payBtn = document.createElement('button');
+      payBtn.textContent = 'Pay $50';
+      payBtn.addEventListener('click', () => payCard(c.id));
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', () => deleteCard(c.id));
+
+      li.appendChild(payBtn);
+      li.appendChild(deleteBtn);
+      list.appendChild(li);
+    });
+  } catch (err) {
+    console.error(err);
+    alert('Failed to load cards.');
+  }
+}
+
+// Pay with saved card
+async function payCard(paymentMethodId) {
+  try {
+    const data = await apiFetch('http://127.0.0.1:8000/api/charge-card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payment_method_id: paymentMethodId, amount: 50 })
+    });
+    if (data.status === 'success') alert('Payment successful 🎉');
+    else alert('Payment failed');
+  } catch (err) {
+    console.error(err);
+    alert('Payment failed.');
+  }
+}
+
+// Delete saved card
+async function deleteCard(paymentMethodId) {
+  try {
+    await apiFetch(`http://127.0.0.1:8000/api/cards/${paymentMethodId}`, {
+      method: 'DELETE'
+    });
+    loadCards();
+  } catch (err) {
+    console.error(err);
+    alert('Delete failed');
+  }
+}
+
+// Setup Stripe Elements for adding new card
+async function setupNewCard() {
+  try {
+    const data = await apiFetch('http://127.0.0.1:8000/api/setup-intent', { method: 'POST' });
+    const elements = stripe.elements();
+    const card = elements.create('card');
+    card.mount('#card-element');
+
+    document.getElementById('card-form').addEventListener('submit', async e => {
+      e.preventDefault(); // prevent reload
+      const { setupIntent, error } = await stripe.confirmCardSetup(data.clientSecret, {
+        payment_method: { card }
+      });
+
+      if (error) alert(error.message);
+      else {
+        alert('Card saved! PaymentMethod ID: ' + setupIntent.payment_method);
+        loadCards();
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    alert('Failed to initialize card form.');
+  }
+}
+
+// Initialize
+setupNewCard();
+loadCards();
+</script>
+
+</body>
+</html>
