@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Filament\Models\Contracts\HasName;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use App\Traits\HasNotificationPreferences;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements HasName
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
     use HasNotificationPreferences;
@@ -21,6 +22,8 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'username',
+        'firstname',
+        'lastname',
         'email',
         'phone',
         'country_code',
@@ -32,9 +35,13 @@ class User extends Authenticatable
         'phone_verified_at',
         'agree_terms',
         'is_active',
+        'is_admin',
         'stripe_customer_id',
         'google_id',
-        'avatar'
+        'avatar',
+        'loyalty_points',
+        'store_credits',
+        'preferred_languages',
     ];
 
     /**
@@ -60,6 +67,10 @@ class User extends Authenticatable
         'phone_verified' => 'boolean',
         'agree_terms' => 'boolean',
         'is_active' => 'boolean',
+        'is_admin' => 'boolean',
+        'loyalty_points' => 'integer',
+        'store_credits' => 'decimal:2',
+        'preferred_languages' => 'array',
     ];
 
     /**
@@ -68,6 +79,51 @@ class User extends Authenticatable
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    /**
+     * Scope a query to only include admin users.
+     */
+    public function scopeAdmin($query)
+    {
+        return $query->where('is_admin', true);
+    }
+
+    /**
+     * Check if the user is an admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->is_admin === true;
+    }
+
+    /**
+     * Get the user's full name.
+     */
+    public function getFullNameAttribute(): ?string
+    {
+        if ($this->firstname && $this->lastname) {
+            return trim($this->firstname . ' ' . $this->lastname);
+        }
+        return $this->firstname ?? $this->lastname ?? null;
+    }
+
+    /**
+     * Get the user's name for Filament.
+     * Filament expects a 'name' attribute, but we use 'username'.
+     */
+    public function getNameAttribute(): string
+    {
+        return $this->full_name ?? $this->username ?? $this->email ?? 'User';
+    }
+
+    /**
+     * Get the Filament name for the user.
+     * This is required by the HasName contract.
+     */
+    public function getFilamentName(): string
+    {
+        return $this->username ?? $this->email ?? 'User';
     }
 
     /**

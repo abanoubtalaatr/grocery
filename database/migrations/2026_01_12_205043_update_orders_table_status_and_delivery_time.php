@@ -12,14 +12,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            // Add new timestamp columns
-            $table->timestamp('placed_at')->nullable()->after('notes');
-            $table->timestamp('processing_at')->nullable()->after('placed_at');
-            $table->timestamp('shipping_at')->nullable()->after('processing_at');
-            // Add estimated_delivery_time column
-            $table->timestamp('estimated_delivery_time')->nullable()->after('delivered_at');
-        });
+        // Add new timestamp columns only if they don't exist
+        if (!Schema::hasColumn('orders', 'placed_at')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->timestamp('placed_at')->nullable()->after('notes');
+            });
+        }
+        if (!Schema::hasColumn('orders', 'processing_at')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->timestamp('processing_at')->nullable()->after('placed_at');
+            });
+        }
+        if (!Schema::hasColumn('orders', 'shipping_at')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->timestamp('shipping_at')->nullable()->after('processing_at');
+            });
+        }
+        if (!Schema::hasColumn('orders', 'estimated_delivery_time')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->timestamp('estimated_delivery_time')->nullable()->after('delivered_at');
+            });
+        }
 
         // Migrate data from old columns to new columns
         DB::table('orders')
@@ -29,10 +42,11 @@ return new class extends Migration
                 'processing_at' => DB::raw('preparing_at'),
             ]);
 
-        // Update status enum - we need to use raw SQL for enum changes
-        DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('placed', 'processing', 'shipping', 'out_for_delivery', 'delivered', 'cancelled') DEFAULT 'placed'");
+        // IMPORTANT: Expand ENUM FIRST to include both old and new values
+        // This allows us to update the status values
+        DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending', 'confirmed', 'preparing', 'ready', 'placed', 'processing', 'shipping', 'out_for_delivery', 'delivered', 'cancelled') DEFAULT 'pending'");
         
-        // Map old statuses to new ones
+        // Now update status values from old to new
         DB::table('orders')
             ->where('status', 'pending')
             ->update(['status' => 'placed']);
@@ -41,10 +55,25 @@ return new class extends Migration
             ->whereIn('status', ['confirmed', 'preparing', 'ready'])
             ->update(['status' => 'processing']);
 
-        // Drop old timestamp columns
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn(['confirmed_at', 'preparing_at', 'ready_at']);
-        });
+        // Finally, restrict ENUM to only new values
+        DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('placed', 'processing', 'shipping', 'out_for_delivery', 'delivered', 'cancelled') DEFAULT 'placed'");
+
+        // Drop old timestamp columns only if they exist
+        $columnsToDrop = [];
+        if (Schema::hasColumn('orders', 'confirmed_at')) {
+            $columnsToDrop[] = 'confirmed_at';
+        }
+        if (Schema::hasColumn('orders', 'preparing_at')) {
+            $columnsToDrop[] = 'preparing_at';
+        }
+        if (Schema::hasColumn('orders', 'ready_at')) {
+            $columnsToDrop[] = 'ready_at';
+        }
+        if (!empty($columnsToDrop)) {
+            Schema::table('orders', function (Blueprint $table) use ($columnsToDrop) {
+                $table->dropColumn($columnsToDrop);
+            });
+        }
     }
 
     /**
@@ -67,12 +96,8 @@ return new class extends Migration
                 'preparing_at' => DB::raw('processing_at'),
             ]);
 
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn(['estimated_delivery_time', 'placed_at', 'processing_at', 'shipping_at']);
-        });
-
-        // Revert status enum
-        DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled') DEFAULT 'pending'");
+        // Revert status enum - first expand to include both old and new values
+        DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('placed', 'processing', 'shipping', 'out_for_delivery', 'delivered', 'cancelled', 'pending', 'confirmed', 'preparing', 'ready') DEFAULT 'pending'");
         
         // Map new statuses back to old ones
         DB::table('orders')
@@ -86,5 +111,12 @@ return new class extends Migration
         DB::table('orders')
             ->where('status', 'shipping')
             ->update(['status' => 'preparing']);
+
+        // Now revert to only old values
+        DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled') DEFAULT 'pending'");
+
+        Schema::table('orders', function (Blueprint $table) {
+            $table->dropColumn(['estimated_delivery_time', 'placed_at', 'processing_at', 'shipping_at']);
+        });
     }
 };

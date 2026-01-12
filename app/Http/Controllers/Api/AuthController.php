@@ -8,9 +8,11 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\ForgotPasswordRequest;
 use App\Http\Requests\VerifyOtpRequest;
 use App\Http\Requests\ResetPasswordRequest;
+use App\Http\Requests\ChangePasswordRequest;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -229,5 +231,34 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Account deleted successfully',
         ]);
+    }
+
+    /**
+     * Change password for authenticated user
+     */
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            // Update password
+            $user->update([
+                'password' => Hash::make($request->input('password')),
+            ]);
+
+            // Revoke all tokens except the current one (optional - for security)
+            // $user->tokens()->where('id', '!=', $request->user()->currentAccessToken()->id)->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password changed successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to change password',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

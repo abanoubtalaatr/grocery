@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             StaticPageSeeder::class,
             ContactMessageSeeder::class,
             SettingSeeder::class,
+            SpecialNoteSeeder::class,
         ]);
     }
 }

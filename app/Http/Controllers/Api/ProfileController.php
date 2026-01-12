@@ -26,9 +26,13 @@ class ProfileController extends Controller
                 'data' => [
                     'id' => $user->id,
                     'username' => $user->username,
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'full_name' => $user->full_name,
                     'email' => $user->email,
                     'phone' => $user->phone,
                     'country_code' => $user->country_code,
+                    'preferred_languages' => $user->preferred_languages ?? [],
                     'profile_image' => $user->profile_image,
                     'profile_image_url' => $user->profile_image_url,
                     'email_verified' => $user->email_verified,
@@ -105,9 +109,13 @@ class ProfileController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'username' => ['sometimes', 'string', 'max:255', Rule::unique('users')->ignore($user->id), 'alpha_dash'],
+                'firstname' => ['sometimes', 'string', 'max:255'],
+                'lastname' => ['sometimes', 'string', 'max:255'],
                 'email' => ['sometimes', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
                 'phone' => ['sometimes', 'string', 'max:20', Rule::unique('users')->ignore($user->id), 'regex:/^\+?[1-9]\d{1,14}$/'],
                 'country_code' => ['sometimes', 'string', 'max:5', 'regex:/^\+\d{1,4}$/'],
+                'preferred_languages' => ['sometimes', 'array'],
+                'preferred_languages.*' => ['string', 'max:10'],
             ]);
 
             if ($validator->fails()) {
@@ -119,12 +127,20 @@ class ProfileController extends Controller
             }
 
             // Update only provided fields
-            $data = $request->only(['username', 'email', 'phone', 'country_code']);
+            $data = $request->only(['username', 'firstname', 'lastname', 'email', 'phone', 'country_code', 'preferred_languages']);
             
-            // Remove empty values
-            $data = array_filter($data, function ($value) {
+            // Handle preferred_languages separately (can be empty array)
+            if ($request->has('preferred_languages')) {
+                $data['preferred_languages'] = $request->preferred_languages ?? [];
+            }
+            
+            // Remove empty values (except preferred_languages which can be empty array)
+            $data = array_filter($data, function ($value, $key) {
+                if ($key === 'preferred_languages') {
+                    return true; // Always include preferred_languages even if empty
+                }
                 return $value !== null && $value !== '';
-            });
+            }, ARRAY_FILTER_USE_BOTH);
 
             if (empty($data)) {
                 return response()->json([
@@ -141,9 +157,13 @@ class ProfileController extends Controller
                 'data' => [
                     'id' => $user->id,
                     'username' => $user->username,
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'full_name' => $user->full_name,
                     'email' => $user->email,
                     'phone' => $user->phone,
                     'country_code' => $user->country_code,
+                    'preferred_languages' => $user->preferred_languages ?? [],
                     'profile_image_url' => $user->profile_image_url,
                     'updated_at' => $user->updated_at,
                 ],

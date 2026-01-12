@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\MealController;
+use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\StripeController;
 use App\Http\Controllers\Api\AddressController;
@@ -17,10 +18,13 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\SmartListController;
 use App\Http\Controllers\Api\StaticPageController;
+use App\Http\Controllers\Api\SpecialNoteController;
 use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
 use App\Http\Controllers\API\NotificationSettingsController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\PaymentController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -47,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth routes
     Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::post('/change-password', [AuthController::class, 'changePassword']);
         Route::delete('/delete-account', [AuthController::class, 'deleteAccount']);
         Route::get('/me', [AuthController::class, 'me']);
     });
@@ -118,7 +123,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('more-to-explore',[MealController::class, 'moreToExplore']);
     Route::get('frequency',[MealController::class, 'frequency']);
     Route::get('settings',[SettingController::class, 'index']);
+    Route::get('special-notes',[SpecialNoteController::class, 'index']);
     // Categories routes
+
+    Route::prefix('offers')->group(function () {
+        Route::get('/', [OfferController::class, 'index']);
+        Route::get('/featured', [OfferController::class, 'featured']);
+        Route::get('/validate', [OfferController::class, 'validateOffer']);
+        Route::get('/{code}', [OfferController::class, 'showByCode']);
+    });
     Route::prefix('categories')->group(function () {
         Route::get('/', [CategoryController::class, 'index']);
         Route::get('/{id}', [CategoryController::class, 'show']);
@@ -164,6 +177,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/track', [OrderController::class, 'track']);
         Route::get('/{id}', [OrderController::class, 'show']);
     });
+
+    // Payment routes
+    Route::prefix('payments')->group(function () {
+        Route::get('/history', [PaymentController::class, 'paymentHistory']);
+        Route::get('/receipt/{order}', [PaymentController::class, 'receipt']);
+        Route::get('/invoice/{order}', [PaymentController::class, 'invoice']);
+    });
+
+    // Dashboard route
+    Route::get('/dashboard', [DashboardController::class, 'index']);
 });
 
 Route::get('/faqs', [FaqController::class, 'index']);

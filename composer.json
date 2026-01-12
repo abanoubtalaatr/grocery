@@ -2,10 +2,16 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "Grocery Mobile Application Backend",
-    "keywords": ["laravel", "framework", "api", "mobile"],
+    "keywords": [
+        "laravel",
+        "framework",
+        "api",
+        "mobile"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.1",
+        "filament/filament": "^3.2",
         "google/apiclient": "^2.19",
         "guzzlehttp/guzzle": "^7.2",
         "intervention/image": "^2.7",
@@ -39,7 +45,8 @@
     "scripts": {
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
+            "@php artisan package:discover --ansi",
+            "@php artisan filament:upgrade"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"

@@ -436,7 +436,7 @@ class MealController extends Controller
     public function show(string $id): JsonResponse
     {
         try {
-            $meal = Meal::with(['category', 'subcategory'])->findOrFail($id);
+            $meal = Meal::with(['category', 'subcategory','reviews'])->findOrFail($id);
 
             return response()->json([
                 'success' => true,
@@ -487,6 +487,14 @@ class MealController extends Controller
                         'name' => $meal->category->name,
                         'slug' => $meal->category->slug,
                     ],
+                    'reviews' => $meal->reviews->map(function ($review) {
+                        return [
+                            'id' => $review->id,
+                            'rating' => $review->rating,
+                            'comment' => $review->comment,
+                            'images' => $review->images,
+                        ];
+                    }),
                     'subcategory' => $meal->subcategory ? [
                         'id' => $meal->subcategory->id,
                         'name' => $meal->subcategory->name,
