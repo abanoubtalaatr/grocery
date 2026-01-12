@@ -13,7 +13,7 @@ use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\ChatbotController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\APi\SettingController;
+use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\SmartListController;
