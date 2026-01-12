@@ -22,7 +22,7 @@ use App\Http\Controllers\Api\SpecialNoteController;
 use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
-use App\Http\Controllers\API\NotificationSettingsController;
+use App\Http\Controllers\APi\NotificationSettingsController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\PaymentController;
 /*
