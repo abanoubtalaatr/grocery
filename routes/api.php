@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\FaqController;
+// use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\MealController;
@@ -189,7 +189,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
 });
 
-Route::get('/faqs', [FaqController::class, 'index']);
+// Route::get('/faqs', [FaqController::class, 'index']);
 Route::get('/pages', [StaticPageController::class, 'index']);
 Route::get('/pages/slug/{slug}', [StaticPageController::class, 'showBySlug']);
 Route::get('/pages/important', [StaticPageController::class, 'importantPages']);
