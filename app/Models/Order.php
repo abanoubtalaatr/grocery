@@ -24,12 +24,13 @@ class Order extends Model
         'discount',
         'total',
         'notes',
-        'confirmed_at',
-        'preparing_at',
-        'ready_at',
+        'placed_at',
+        'processing_at',
+        'shipping_at',
         'out_for_delivery_at',
         'delivered_at',
         'cancelled_at',
+        'estimated_delivery_time',
     ];
 
     protected $casts = [
@@ -37,12 +38,13 @@ class Order extends Model
         'tax' => 'decimal:2',
         'discount' => 'decimal:2',
         'total' => 'decimal:2',
-        'confirmed_at' => 'datetime',
-        'preparing_at' => 'datetime',
-        'ready_at' => 'datetime',
+        'placed_at' => 'datetime',
+        'processing_at' => 'datetime',
+        'shipping_at' => 'datetime',
         'out_for_delivery_at' => 'datetime',
         'delivered_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'estimated_delivery_time' => 'datetime',
     ];
 
     /**
@@ -96,14 +98,16 @@ class Order extends Model
     }
 
     /**
-     * Get the status position (1, 2, 3).
+     * Get the status position (1, 2, 3, 4, 5).
      */
     public function getStatusPositionAttribute(): int
     {
         return match($this->status) {
-            'pending', 'confirmed' => 1,
-            'preparing', 'ready', 'out_for_delivery' => 2,
-            'delivered' => 3,
+            'placed' => 1,
+            'processing' => 2,
+            'shipping' => 3,
+            'out_for_delivery' => 4,
+            'delivered' => 5,
             'cancelled' => 0,
             default => 0,
         };
@@ -115,10 +119,9 @@ class Order extends Model
     public function getStatusDescriptionAttribute(): string
     {
         return match($this->status) {
-            'pending' => 'Order placed',
-            'confirmed' => 'Order confirmed',
-            'preparing' => 'Preparing your order',
-            'ready' => 'Order ready',
+            'placed' => 'Order placed',
+            'processing' => 'Processing',
+            'shipping' => 'Shipping',
             'out_for_delivery' => 'Out for delivery',
             'delivered' => 'Delivered',
             'cancelled' => 'Cancelled',
@@ -127,11 +130,19 @@ class Order extends Model
     }
 
     /**
-     * Scope a query to only include pending orders.
+     * Scope a query to only include placed orders.
+     */
+    public function scopePlaced($query)
+    {
+        return $query->where('status', 'placed');
+    }
+
+    /**
+     * Scope a query to only include pending orders (for backward compatibility).
      */
     public function scopePending($query)
     {
-        return $query->where('status', 'pending');
+        return $query->where('status', 'placed');
     }
 
     /**

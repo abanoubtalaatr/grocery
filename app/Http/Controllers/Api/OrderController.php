@@ -254,12 +254,13 @@ class OrderController extends Controller
             'payment_method' => $validated['payment_method'],
             'payment_method_id' => $validated['payment_method_id'] ?? null,
             'delivery_type' => $validated['delivery_type'],
-            'status' => 'pending',
+            'status' => 'placed',
             'subtotal' => $subtotal,
             'tax' => $totals['tax'],
             'discount' => $totals['discount'],
             'total' => $totals['total'],
             'notes' => $validated['notes'] ?? null,
+            'placed_at' => now(),
         ]);
     }
 
@@ -358,14 +359,30 @@ class OrderController extends Controller
                         'positions' => [
                             [
                                 'position' => 1,
-                                'status' => 'confirmed',
-                                'label' => 'Order Confirmed',
-                                'description' => 'Your order has been confirmed',
-                                'completed' => in_array($order->status, ['confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered']),
-                                'timestamp' => $order->confirmed_at,
+                                'status' => 'placed',
+                                'label' => 'Order Placed',
+                                'description' => 'Your order has been placed',
+                                'completed' => in_array($order->status, ['placed', 'processing', 'shipping', 'out_for_delivery', 'delivered']),
+                                'timestamp' => $order->placed_at,
                             ],
                             [
                                 'position' => 2,
+                                'status' => 'processing',
+                                'label' => 'Processing',
+                                'description' => 'Your order is being processed',
+                                'completed' => in_array($order->status, ['processing', 'shipping', 'out_for_delivery', 'delivered']),
+                                'timestamp' => $order->processing_at,
+                            ],
+                            [
+                                'position' => 3,
+                                'status' => 'shipping',
+                                'label' => 'Shipping',
+                                'description' => 'Your order is being shipped',
+                                'completed' => in_array($order->status, ['shipping', 'out_for_delivery', 'delivered']),
+                                'timestamp' => $order->shipping_at,
+                            ],
+                            [
+                                'position' => 4,
                                 'status' => 'out_for_delivery',
                                 'label' => 'Out for Delivery',
                                 'description' => 'Your order is on the way',
@@ -373,7 +390,7 @@ class OrderController extends Controller
                                 'timestamp' => $order->out_for_delivery_at,
                             ],
                             [
-                                'position' => 3,
+                                'position' => 5,
                                 'status' => 'delivered',
                                 'label' => 'Delivered',
                                 'description' => 'Your order has been delivered',
@@ -458,11 +475,12 @@ class OrderController extends Controller
             'notes' => $order->notes,
             'created_at' => $order->created_at,
             'updated_at' => $order->updated_at,
-            'confirmed_at' => $order->confirmed_at,
-            'preparing_at' => $order->preparing_at,
-            'ready_at' => $order->ready_at,
+            'placed_at' => $order->placed_at,
+            'processing_at' => $order->processing_at,
+            'shipping_at' => $order->shipping_at,
             'out_for_delivery_at' => $order->out_for_delivery_at,
             'delivered_at' => $order->delivered_at,
+            'estimated_delivery_time' => $order->estimated_delivery_time,
         ];
     }
 }
