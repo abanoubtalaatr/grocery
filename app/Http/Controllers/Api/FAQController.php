@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class FaqController extends Controller
+
 {
     /**
      * Display a listing of the FAQs.
