@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 // use App\Http\Controllers\Api\FaqController;
+use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\MealController;
@@ -12,10 +13,12 @@ use App\Http\Controllers\Api\StripeController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\ChatbotController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\SmartListController;
 use App\Http\Controllers\Api\StaticPageController;
 use App\Http\Controllers\Api\SpecialNoteController;
@@ -23,8 +26,6 @@ use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\NotificationSettingsController;
-use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\PaymentController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -189,7 +190,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
 });
 
-// Route::get('/faqs', [FaqController::class, 'index']);
+Route::get('/faqs', [FaqController::class, 'index']);
 Route::get('/pages', [StaticPageController::class, 'index']);
 Route::get('/pages/slug/{slug}', [StaticPageController::class, 'showBySlug']);
 Route::get('/pages/important', [StaticPageController::class, 'importantPages']);
