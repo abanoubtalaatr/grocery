@@ -2,8 +2,6 @@
 
 return [
 
-
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
     /*
     |--------------------------------------------------------------------------
     | Cross-Origin Resource Sharing (CORS) Configuration
@@ -17,7 +15,7 @@ return [
     |
     */
 
-    'paths' => ['/api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
@@ -27,7 +25,9 @@ return [
         'https://grocery-plus-22.vercel.app',
     ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '#^https://.*\.vercel\.app$#',
+    ],
 
     'allowed_headers' => ['*'],
 
@@ -35,6 +35,6 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true
+    'supports_credentials' => true,
 
 ];
