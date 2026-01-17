@@ -16,5 +16,14 @@ class VerifyCsrfToken extends Middleware
         'api/cards',
         'api/charge-card',
         'api/cards/*',
+        // Public auth routes - no authentication required
+        'api/auth/register',
+        'api/auth/login',
+        'api/auth/forgot-password',
+        'api/auth/verify-otp',
+        'api/auth/reset-password',
+        'api/auth/google',
+        // Public contact form
+        'api/contact',
     ];
 }
