@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'api/auth/*'],
 
     'allowed_methods' => ['*'],
 
@@ -26,7 +26,7 @@ return [
     ],
 
     'allowed_origins_patterns' => [
-        '#^https://.*\.vercel\.app$#',
+        '#^https?://.*\.vercel\.app$#',
     ],
 
     'allowed_headers' => ['*'],
