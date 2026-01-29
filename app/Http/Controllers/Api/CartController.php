@@ -69,12 +69,12 @@ class CartController extends Controller
             }
 
             // Check if meal has expired
-            if ($meal->isExpired()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This meal has expired',
-                ], 400);
-            }
+            // if ($meal->isExpired()) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'This meal has expired',
+            //     ], 400);
+            // }
 
             // Check stock quantity
             if ($meal->stock_quantity < $validated['quantity']) {
