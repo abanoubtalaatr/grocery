@@ -86,6 +86,7 @@ class OrderController extends Controller
                 return response()->json($paymentResult['response'], 400);
             }
 
+            
             // Create order
             $order = $this->createOrder($user, $validated, $totals['subtotal'], $totals);
 
@@ -497,6 +498,8 @@ class OrderController extends Controller
             'delivered_at' => $order->delivered_at,
             'estimated_delivery_time' => $order->estimated_delivery_time,
             'special_note' => $order->special_note,
+            'schedule_delivery' => $order->schedule_delivery,
+            'delivery_speed' => $order->delivery_speed,
         ];
     }
 }

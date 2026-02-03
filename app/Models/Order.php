@@ -31,6 +31,8 @@ class Order extends Model
         'delivered_at',
         'cancelled_at',
         'estimated_delivery_time',
+        'schedule_delivery',
+        'delivery_speed',
     ];
 
     protected $casts = [

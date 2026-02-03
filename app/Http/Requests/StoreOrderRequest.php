@@ -38,6 +38,14 @@ class StoreOrderRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:1000'],
             'special_note_id' => ['nullable', 'exists:special_notes,id'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'contacts_information' => ['nullable'],
+            'schedule_delivery' => ['nullable', 'string', 'max:255'],
+            'delivery_speed' => ['nullable', 'string', 'max:255'],
+            'estimated_delivery_time' => ['nullable', 'integer', 'min:0'],
+            'contacts_information.first_name' => ['nullable', 'string', 'max:255'],
+            'contacts_information.last_name' => ['nullable', 'string', 'max:255'],
+            'contacts_information.email' => ['nullable', 'email', 'max:255'],
+            'contacts_information.phone' => ['nullable', 'string', 'max:20'],
         ];
     }
 
