@@ -303,8 +303,8 @@ class OrderController extends Controller
         try {
             $user = $request->user();
 
-            $orders = Order::where('user_id', $user->id)
-                ->with(['items.meal.category', 'items.meal.subcategory', 'address'])
+            $orders = Order::
+                with(['items.meal.category', 'items.meal.subcategory', 'address'])
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($order) {
