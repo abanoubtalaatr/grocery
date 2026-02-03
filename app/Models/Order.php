@@ -152,4 +152,36 @@ class Order extends Model
     {
         return $query->whereNotIn('status', ['cancelled', 'delivered']);
     }
+    public function notes(): HasMany
+    {
+        return $this->hasMany(OrderNote::class);
+    }
+    public function specialNote(): BelongsTo
+    {
+        return $this->belongsTo(SpecialNote::class);
+    }
+
+    public function getSpecialNoteAttribute(): ?string
+    {
+        // Check if the main order 'notes' field exists and return it if present.
+        if (!empty($this->notes)) {
+            return $this->notes;
+        }
+
+        // Check if there is at least one related OrderNote
+        $orderNote = $this->notes()->first();
+        if ($orderNote) {
+            // If the OrderNote has a related SpecialNote, return its name
+            if ($orderNote->specialNote) {
+                return $orderNote->specialNote->name;
+            }
+            // Otherwise return the notes field from OrderNote if present
+            if (!empty($orderNote->notes)) {
+                return $orderNote->notes;
+            }
+        }
+
+        // Nothing found
+        return null;
+    }
 }

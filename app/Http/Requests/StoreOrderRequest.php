@@ -36,6 +36,8 @@ class StoreOrderRequest extends FormRequest
             ],
             'amount' => ['required', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'special_note_id' => ['nullable', 'exists:special_notes,id'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
 

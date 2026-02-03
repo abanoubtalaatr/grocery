@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreOrderRequest;
-use App\Models\Address;
+use Stripe\Stripe;
 use App\Models\Cart;
 use App\Models\Meal;
 use App\Models\Order;
+use App\Models\Address;
 use App\Models\OrderItem;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Models\OrderNote;
 use Stripe\PaymentIntent;
-use Stripe\Stripe;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreOrderRequest;
 
 class OrderController extends Controller
 {
@@ -94,6 +95,20 @@ class OrderController extends Controller
             // Clear user's active cart
             $this->clearUserCart($user);
 
+            if($validated['special_note_id']) {
+                OrderNote::create([
+                    'order_id' => $order->id,
+                    'special_note_id' => $validated['special_note_id'],
+                    'notes' => $validated['notes'] ?? null,
+                ]);
+            }
+            if($validated['notes']) {
+                OrderNote::create([
+                    'order_id' => $order->id,
+                    'special_note_id' => null,
+                    'notes' => $validated['notes'],
+                ]);
+            }
             DB::commit();
 
             $order->load(['items.meal', 'address']);
@@ -481,6 +496,7 @@ class OrderController extends Controller
             'out_for_delivery_at' => $order->out_for_delivery_at,
             'delivered_at' => $order->delivered_at,
             'estimated_delivery_time' => $order->estimated_delivery_time,
+            'special_note' => $order->special_note,
         ];
     }
 }
