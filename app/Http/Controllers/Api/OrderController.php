@@ -67,14 +67,14 @@ class OrderController extends Controller
             $total = $cart->total;
 
             // Validate amount matches cart total
-            if (abs($total - $validated['amount']) > 0.01) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Amount mismatch. Please recalculate your order.',
-                    'calculated_total' => $total,
-                    'provided_amount' => $validated['amount'],
-                ], 400);
-            }
+            // if (abs($total - $validated['amount']) > 0.01) {
+            //     return response()->json([
+            //         'success' => false,
+            //         'message' => 'Amount mismatch. Please recalculate your order.',
+            //         'calculated_total' => $total,
+            //         'provided_amount' => $validated['amount'],
+            //     ], 400);
+            // }
 
             DB::beginTransaction();
 

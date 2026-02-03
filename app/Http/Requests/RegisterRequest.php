@@ -23,7 +23,7 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'username' => ['required', 'string', 'max:255', 'unique:users,username', 'alpha_dash'],
+            'username' => ['required', 'string', 'max:255', 'unique:users,username', 'alpha_dash','min:3'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email', 'required_without:phone'],
             'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone', 'required_without:email', 'regex:/^\+?[1-9]\d{1,14}$/'],
             'password' => ['required', 'string', 'confirmed', Password::min(8)->letters()->numbers()],
