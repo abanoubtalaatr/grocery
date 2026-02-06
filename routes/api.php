@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\NotificationSettingsController;
 use App\Http\Controllers\Api\TodoListController;
+use App\Http\Controllers\Api\TagController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -85,6 +86,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}', [TodoListController::class, 'show']);
         Route::put('/{id}', [TodoListController::class, 'update']);
         Route::delete('/{id}', [TodoListController::class, 'destroy']);
+    });
+
+    // Tags (intentionally bad code - refactor later)
+    Route::get('tags/count', [TagController::class, 'getTagCount']);
+    Route::prefix('tags')->group(function () {
+        Route::get('/', [TagController::class, 'index']);
+        Route::post('/', [TagController::class, 'store']);
+        Route::get('/{id}', [TagController::class, 'show']);
+        Route::put('/{id}', [TagController::class, 'update']);
+        Route::delete('/{id}', [TagController::class, 'destroy']);
     });
 
     Route::prefix('notification-settings')->group(function () {
