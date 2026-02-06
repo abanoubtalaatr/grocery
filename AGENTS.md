@@ -1,117 +1,61 @@
-# Professional Laravel Code Review & Architecture Guide
+## Scope of Review (Very Important)
 
-You are performing **automatic code reviews** on this repository.
-Always review code as a **Senior Laravel Backend Engineer & Architect**.
+You must review **every changed file** in any Pull Request, including but not limited to:
 
-Your goal is to improve:
-- Maintainability
-- Scalability
-- Testability
-- Code clarity
-- Architecture quality
+- Controllers
+- Form Requests
+- Models
+- Migrations
+- Actions / Services
+- Traits
+- Jobs
+- Events & Listeners
+- Policies
+- Resources
+- Routes
+- Seeders & Factories
+- Config files
+- Any custom PHP classes
 
-Always be constructive, professional, and direct.
+### Review Expectations Per File Type
 
----
+#### Controllers
+- Must be thin
+- No validation
+- No business logic
+- Only orchestration and response handling
 
-## Review Identity & Style
+#### Form Requests
+- Correct validation rules
+- Proper authorization logic
+- No business logic
 
-- Write the review **as if it is written by Abanoub Talaat**
-- Start every review with:
-  
-  **"Code Review by Abanoub Talaat"**
+#### Models
+- Proper `$fillable` or `$guarded`
+- Correct relationships
+- No business logic leakage
+- Use accessors/mutators when appropriate
 
-- End every review with:
-  
-  **"- Abanoub"**
+#### Migrations
+- Correct column types
+- Proper indexing
+- Foreign keys when needed
+- No nullable fields without justification
 
-- Tone:
-  - Professional
-  - Senior-level
-  - Clear and educational
-- Do NOT be verbose
-- Do NOT praise unnecessarily
-- Focus on improvements and architecture
+#### Actions / Services
+- Single responsibility
+- Clear naming
+- No HTTP concerns
+- Reusable and testable
 
----
+#### Traits
+- Clear purpose
+- No hidden side effects
+- Used consistently
 
-## 1️⃣ What a Professional Laravel Code Review Looks Like
-
-A senior-level Laravel review focuses on **maintainability, testability, and clarity**, not just “does it work?”.
-
-### ✅ Code Review Checklist
-
-### Architecture
-- Controllers must be **thin**
-- No business logic in controllers
-- Business logic must live in **Action / Service classes**
-- Validation must be done using **FormRequest classes**
-- Responses must be **consistent**
-- Avoid duplicated logic
-
-### Laravel Best Practices
+#### Routes
+- Proper RESTful naming
 - Use Route Model Binding
-- Use Mass Assignment safely (`$fillable`)
-- Avoid logic inside Blade views
-- Use Eloquent relationships properly
-- Avoid N+1 queries
+- No anonymous closures with logic
 
-### API & Clean Code
-- Unified API response structure
-- Meaningful method & variable names
-- Follow Single Responsibility Principle (SRP)
-- Use correct HTTP status codes
-
----
-
-## 2️⃣ Validation Rules
-
-### ❌ Bad Practice
-- Validation inside controllers
-- Inline validation logic
-- Duplicated validation rules
-
-### ✅ Good Practice
-- Use **FormRequest** classes
-- Controllers should receive already validated data
-- Use `$request->validated()`
-
-If validation is found inside a controller:
-- Request refactor to a FormRequest
-- Explain WHY this improves the code
-
----
-
-## 3️⃣ Business Logic Rules (Actions Layer)
-
-### Rules
-- Controllers should **coordinate**, not calculate
-- Any logic beyond simple CRUD must live in an **Action class**
-- Actions must be:
-  - Reusable
-  - Testable
-  - Single-purpose
-
-### When to Suggest Actions
-- Logic reused in multiple places
-- Complex create/update flows
-- Business rules
-- Side effects (events, jobs, notifications)
-
----
-
-## 4️⃣ API Response Rules
-
-- APIs must return a **consistent JSON structure**
-- Prefer using a shared **ApiResponse Trait**
-- Avoid returning raw models directly without structure
-
-### Required Response Structure
-
-Success:
-```json
-{
-  "success": true,
-  "message": "string",
-  "data": {}
-}
+If **any file is skipped**, this is considered an incorrect review.
