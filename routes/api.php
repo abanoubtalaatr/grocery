@@ -26,6 +26,9 @@ use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\NotificationSettingsController;
+use App\Http\Controllers\Api\TodoListController;
+use App\Http\Controllers\Api\TagController;
+use App\Http\Controllers\Api\TaskController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -75,7 +78,35 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/set-default', [AddressController::class, 'setDefault']);
     });
 
-    Route::apiResource('smart-lists',SmartListController::class);
+    Route::apiResource('smart-lists', SmartListController::class);
+
+    // Todo list routes
+    Route::prefix('todo-lists')->group(function () {
+        Route::get('/', [TodoListController::class, 'index']);
+        Route::post('/', [TodoListController::class, 'store']);
+        Route::get('/{id}', [TodoListController::class, 'show']);
+        Route::put('/{id}', [TodoListController::class, 'update']);
+        Route::delete('/{id}', [TodoListController::class, 'destroy']);
+    });
+
+    // Task routes
+    Route::prefix('tasks')->group(function () {
+        Route::get('/', [TaskController::class, 'index']);
+        Route::post('/', [TaskController::class, 'store']);
+        Route::get('/{id}', [TaskController::class, 'show']);
+        Route::put('/{id}', [TaskController::class, 'update']);
+        Route::delete('/{id}', [TaskController::class, 'destroy']);
+    });
+
+    // Tags (intentionally bad code - refactor later)
+    Route::get('tags/count', [TagController::class, 'getTagCount']);
+    Route::prefix('tags')->group(function () {
+        Route::get('/', [TagController::class, 'index']);
+        Route::post('/', [TagController::class, 'store']);
+        Route::get('/{id}', [TagController::class, 'show']);
+        Route::put('/{id}', [TagController::class, 'update']);
+        Route::delete('/{id}', [TagController::class, 'destroy']);
+    });
 
     Route::prefix('notification-settings')->group(function () {
         Route::get('/', [NotificationSettingsController::class, 'index']);
