@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\SubcategoryController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\NotificationSettingsController;
+use App\Http\Controllers\Api\TodoListController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -75,7 +76,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/set-default', [AddressController::class, 'setDefault']);
     });
 
-    Route::apiResource('smart-lists',SmartListController::class);
+    Route::apiResource('smart-lists', SmartListController::class);
+
+    // Todo list routes
+    Route::prefix('todo-lists')->group(function () {
+        Route::get('/', [TodoListController::class, 'index']);
+        Route::post('/', [TodoListController::class, 'store']);
+        Route::get('/{id}', [TodoListController::class, 'show']);
+        Route::put('/{id}', [TodoListController::class, 'update']);
+        Route::delete('/{id}', [TodoListController::class, 'destroy']);
+    });
 
     Route::prefix('notification-settings')->group(function () {
         Route::get('/', [NotificationSettingsController::class, 'index']);

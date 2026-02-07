@@ -221,6 +221,14 @@ class User extends Authenticatable implements HasName
     }
 
     /**
+     * Get the user's todo list items.
+     */
+    public function todoLists()
+    {
+        return $this->hasMany(TodoList::class);
+    }
+
+    /**
      * Get the user's default address.
      */
     public function defaultAddress()
