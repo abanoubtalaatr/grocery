@@ -24,51 +24,94 @@ class AddressResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Select::make('user_id')
-                    ->relationship('user', 'id')
-                    ->required(),
+                    ->relationship('user', 'username')
+                    ->searchable()
+                    ->preload()
+                    ->required()
+                    ->rules(['required', 'exists:users,id']),
                 Forms\Components\TextInput::make('label')
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->rules(['nullable', 'string', 'max:255']),
                 Forms\Components\TextInput::make('full_name')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->rules(['required', 'string', 'min:2', 'max:255']),
                 Forms\Components\TextInput::make('phone')
                     ->tel()
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(20)
+                    ->rules([
+                        'required',
+                        'string',
+                        'max:20',
+                        'regex:/^\+?[1-9]\d{1,14}$/',
+                    ])
+                    ->validationMessages([
+                        'regex' => 'The phone must be a valid E.164 number (e.g. +201234567890).',
+                    ]),
                 Forms\Components\TextInput::make('country_code')
                     ->required()
-                    ->maxLength(255)
-                    ->default(+20),
+                    ->maxLength(5)
+                    ->default('+20')
+                    ->rules([
+                        'required',
+                        'string',
+                        'max:5',
+                        'regex:/^\+\d{1,4}$/',
+                    ])
+                    ->validationMessages([
+                        'regex' => 'The country code must start with + followed by 1-4 digits (e.g. +20).',
+                    ]),
                 Forms\Components\TextInput::make('street_address')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(500)
+                    ->rules(['required', 'string', 'min:3', 'max:500']),
                 Forms\Components\TextInput::make('building_number')
-                    ->maxLength(255),
+                    ->maxLength(50)
+                    ->rules(['nullable', 'string', 'max:50']),
                 Forms\Components\TextInput::make('floor')
-                    ->maxLength(255),
+                    ->maxLength(50)
+                    ->rules(['nullable', 'string', 'max:50']),
                 Forms\Components\TextInput::make('apartment')
-                    ->maxLength(255),
+                    ->maxLength(50)
+                    ->rules(['nullable', 'string', 'max:50']),
                 Forms\Components\TextInput::make('landmark')
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->rules(['nullable', 'string', 'max:255']),
                 Forms\Components\TextInput::make('city')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(100)
+                    ->rules(['required', 'string', 'min:2', 'max:100']),
                 Forms\Components\TextInput::make('state')
-                    ->maxLength(255),
+                    ->maxLength(100)
+                    ->rules(['nullable', 'string', 'max:100']),
                 Forms\Components\TextInput::make('postal_code')
-                    ->maxLength(255),
+                    ->maxLength(20)
+                    ->rules(['nullable', 'string', 'max:20']),
                 Forms\Components\TextInput::make('country')
                     ->required()
-                    ->maxLength(255)
-                    ->default('Egypt'),
+                    ->maxLength(100)
+                    ->default('Egypt')
+                    ->rules(['required', 'string', 'min:2', 'max:100']),
                 Forms\Components\Textarea::make('notes')
-                    ->columnSpanFull(),
+                    ->maxLength(1000)
+                    ->columnSpanFull()
+                    ->rules(['nullable', 'string', 'max:1000']),
                 Forms\Components\Toggle::make('is_default')
-                    ->required(),
+                    ->required()
+                    ->rules(['boolean']),
                 Forms\Components\TextInput::make('latitude')
-                    ->numeric(),
+                    ->numeric()
+                    ->rules(['nullable', 'numeric', 'between:-90,90'])
+                    ->validationMessages([
+                        'between' => 'Latitude must be between -90 and 90.',
+                    ]),
                 Forms\Components\TextInput::make('longitude')
-                    ->numeric(),
+                    ->numeric()
+                    ->rules(['nullable', 'numeric', 'between:-180,180'])
+                    ->validationMessages([
+                        'between' => 'Longitude must be between -180 and 180.',
+                    ]),
             ]);
     }
 

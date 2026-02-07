@@ -221,6 +221,14 @@ class User extends Authenticatable implements HasName
     }
 
     /**
+     * Get the user's chatbot conversation history.
+     */
+    public function chatbotMessages()
+    {
+        return $this->hasMany(ChatbotMessage::class);
+    }
+
+    /**
      * Get the user's default address.
      */
     public function defaultAddress()

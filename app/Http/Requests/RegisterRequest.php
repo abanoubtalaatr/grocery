@@ -23,16 +23,34 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'username' => ['required', 'string', 'max:255', 'unique:users,username', 'alpha_dash','min:3'],
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                'alpha_dash',
+                'min:3',
+                // Only unique among accounts that are not soft-deleted
+                'unique:users,username,NULL,id,deleted_at,NULL'
+            ],
             'email' => [
                 'nullable',
                 'max:255',
-                'unique:users,email',
                 'required_without:phone',
-                'regex:/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/'
+                'regex:/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/',
+                // Only unique among accounts that are not soft-deleted
+                'unique:users,email,NULL,id,deleted_at,NULL'
             ],
-            'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone', 'required_without:email', 'regex:/^\+?[1-9]\d{1,14}$/'],
-            'password' => ['required', 'string', 'confirmed', Password::min(8)->letters()->numbers()],
+            'phone' => [
+                'nullable',
+                'string',
+                'max:20',
+                'min:10',
+                'required_without:email',
+                'regex:/^\+?[1-9]\d{1,14}$/',
+                // Only unique among accounts that are not soft-deleted
+                'unique:users,phone,NULL,id,deleted_at,NULL'
+            ],
+            'password' => ['required', 'string', 'confirmed', Password::min(8)->letters()->numbers(),'max:20'],
             'agree_terms' => ['required', 'accepted'],
         ];
     }

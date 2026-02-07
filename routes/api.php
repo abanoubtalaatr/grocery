@@ -163,8 +163,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{mealId}', [FavoriteController::class, 'remove']);
     });
 
-    // Chatbot route
-    Route::post('/chatbot', [ChatbotController::class, 'chat']);
+    // Chatbot routes
+    Route::prefix('chatbot')->group(function () {
+        Route::post('/', [ChatbotController::class, 'chat']);
+        Route::get('/history', [ChatbotController::class, 'history']);
+        Route::get('/suggestions', [ChatbotController::class, 'suggestions']);
+    });
 
     Route::get('/cards', [StripeController::class, 'listCards']);
     Route::post('/setup-intent', [StripeController::class, 'createSetupIntent']);

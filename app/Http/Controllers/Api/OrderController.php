@@ -96,14 +96,15 @@ class OrderController extends Controller
             // Clear user's active cart
             $this->clearUserCart($user);
 
-            if($validated['special_note_id']) {
+            
+            if(isset($validated['special_note_id'])) {
                 OrderNote::create([
                     'order_id' => $order->id,
                     'special_note_id' => $validated['special_note_id'],
                     'notes' => $validated['notes'] ?? null,
                 ]);
             }
-            if($validated['notes']) {
+            if(isset($validated['notes'])   ) {
                 OrderNote::create([
                     'order_id' => $order->id,
                     'special_note_id' => null,
