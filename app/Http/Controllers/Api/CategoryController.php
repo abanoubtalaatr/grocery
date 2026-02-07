@@ -103,13 +103,13 @@ class CategoryController extends Controller
     }
 
     /**
-     * Get meals by category
+     * Get meals by category (paginated)
      */
     public function meals(string $id, Request $request): JsonResponse
     {
         try {
             $category = Category::findOrFail($id);
-            
+
             $query = $category->meals()->with(['subcategory'])->available();
 
             // Filter by featured if provided
@@ -127,9 +127,10 @@ class CategoryController extends Controller
                 $query->inStock();
             }
 
-            $meals = $query->orderBy('created_at', 'desc')
-                ->get()
-                ->map(function ($meal) {
+            $perPage = min(max((int) $request->input('per_page', 15), 1), 50);
+            $paginator = $query->orderBy('created_at', 'desc')
+                ->paginate($perPage)
+                ->through(function ($meal) {
                     return [
                         'id' => $meal->id,
                         'title' => $meal->title,
@@ -137,29 +138,29 @@ class CategoryController extends Controller
                         'description' => $meal->description,
                         'image_url' => $meal->image_url,
                         'offer_title' => $meal->offer_title,
-                        
+
                         // Pricing
                         'price' => $meal->price,
                         'discount_price' => $meal->discount_price,
                         'final_price' => $meal->final_price,
                         'has_offer' => $meal->hasOffer(),
-                        
+
                         // Rating & Details
                         'rating' => $meal->rating,
                         'rating_count' => $meal->rating_count,
                         'size' => $meal->size,
                         'brand' => $meal->brand,
-                        
+
                         // Stock & Availability
                         'stock_quantity' => $meal->stock_quantity,
                         'in_stock' => $meal->isInStock(),
                         'is_featured' => $meal->is_featured,
-                        
+
                         // Expiry
                         'expiry_date' => $meal->expiry_date,
                         'days_until_expiry' => $meal->daysUntilExpiry(),
                         'is_expired' => $meal->isExpired(),
-                        
+
                         // Subcategory
                         'subcategory' => $meal->subcategory ? [
                             'id' => $meal->subcategory->id,
@@ -178,8 +179,15 @@ class CategoryController extends Controller
                         'name' => $category->name,
                         'slug' => $category->slug,
                     ],
-                    'meals' => $meals,
-                    'total_count' => $meals->count(),
+                    'meals' => $paginator->items(),
+                    'pagination' => [
+                        'current_page' => $paginator->currentPage(),
+                        'last_page' => $paginator->lastPage(),
+                        'per_page' => $paginator->perPage(),
+                        'total' => $paginator->total(),
+                        'from' => $paginator->firstItem(),
+                        'to' => $paginator->lastItem(),
+                    ],
                 ],
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {

@@ -284,7 +284,7 @@ class CartController extends Controller
     {
         return [
             'id' => $cart->id,
-            'status' => $cart->status,
+            'status' => $cart->isEmpty() ? 'empty' : 'not empty',
             'items' => $cart->items->map(function ($item) {
                 return [
                     'id' => $item->id,

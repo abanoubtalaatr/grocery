@@ -24,7 +24,13 @@ class RegisterRequest extends FormRequest
     {
         return [
             'username' => ['required', 'string', 'max:255', 'unique:users,username', 'alpha_dash','min:3'],
-            'email' => ['nullable', 'email', 'max:255', 'unique:users,email', 'required_without:phone'],
+            'email' => [
+                'nullable',
+                'max:255',
+                'unique:users,email',
+                'required_without:phone',
+                'regex:/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/'
+            ],
             'phone' => ['nullable', 'string', 'max:20', 'unique:users,phone', 'required_without:email', 'regex:/^\+?[1-9]\d{1,14}$/'],
             'password' => ['required', 'string', 'confirmed', Password::min(8)->letters()->numbers()],
             'agree_terms' => ['required', 'accepted'],

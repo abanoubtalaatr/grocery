@@ -22,7 +22,7 @@ class SubcategoryController extends Controller
                 $query->where('category_id', $request->input('category_id'));
             }
 
-            $subcategories = $query->ordered()
+            $subcategories = $query->inRandomOrder()
                 ->get()
                 ->map(function ($subcategory) {
                     return [

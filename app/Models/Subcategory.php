@@ -78,4 +78,19 @@ class Subcategory extends Model
     {
         return $query->orderBy('order', 'asc');
     }
+
+    /**
+     * Get the full image URL (handles relative paths and full URLs).
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        $value = $this->attributes['image_url'] ?? null;
+        if (!$value) {
+            return null;
+        }
+        if (Str::startsWith($value, ['http://', 'https://'])) {
+            return $value;
+        }
+        return asset('storage/' . $value);
+    }
 }
