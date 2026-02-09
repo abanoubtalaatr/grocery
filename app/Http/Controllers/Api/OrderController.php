@@ -448,9 +448,7 @@ class OrderController extends Controller
                         'title' => $item->meal->title,
                         'slug' => $item->meal->slug,
                         'image_url' => $item->meal->image_url,
-                        'price' => $item->meal->price,
-                        'discount_price' => $item->meal->discount_price,
-                        'final_price' => $item->meal->final_price,
+                        ...$item->meal->getApiPriceAttributes(),
                         'category' => $item->meal->category ? [
                             'id' => $item->meal->category->id,
                             'name' => $item->meal->category->name,
@@ -461,9 +459,9 @@ class OrderController extends Controller
                         ] : null,
                     ],
                     'quantity' => $item->quantity,
-                    'unit_price' => $item->unit_price,
-                    'discount_amount' => $item->discount_amount,
-                    'subtotal' => $item->subtotal,
+                    'unit_price' => (float) $item->unit_price,
+                    'discount_amount' => (float) $item->discount_amount,
+                    'subtotal' => (float) $item->subtotal,
                 ];
             }),
             'address' => $order->address ? [

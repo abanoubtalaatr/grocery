@@ -156,7 +156,7 @@ class StaticPageController extends Controller
     public function importantPages()
     {
         $pages = StaticPage::published()
-            ->whereIn('slug', ['terms-and-conditions', 'privacy-policy', 'about-us', 'contact-us'])
+            ->whereIn('slug', ['terms-and-conditions', 'policies', 'about-us', 'contact-us'])
             ->ordered()
             ->get(['slug', 'title']);
 

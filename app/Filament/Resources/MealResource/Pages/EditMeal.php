@@ -16,4 +16,14 @@ class EditMeal extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (! empty(trim((string) ($data['brand_new'] ?? '')))) {
+            $data['brand'] = trim((string) $data['brand_new']);
+        }
+        unset($data['brand_new']);
+
+        return $data;
+    }
 }

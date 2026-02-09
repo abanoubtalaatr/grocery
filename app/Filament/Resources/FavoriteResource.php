@@ -24,10 +24,16 @@ class FavoriteResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Select::make('user_id')
-                    ->relationship('user', 'id')
+                    ->label('User')
+                    ->relationship('user', 'username', fn (Builder $query) => $query->orderBy('username'))
+                    ->searchable()
+                    ->preload()
                     ->required(),
                 Forms\Components\Select::make('meal_id')
-                    ->relationship('meal', 'title')
+                    ->label('Meal')
+                    ->relationship('meal', 'title', fn (Builder $query) => $query->orderBy('title'))
+                    ->searchable()
+                    ->preload()
                     ->required(),
             ]);
     }
@@ -36,11 +42,13 @@ class FavoriteResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('user.id')
-                    ->numeric()
+                Tables\Columns\TextColumn::make('user.username')
+                    ->label('User')
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('meal.title')
-                    ->numeric()
+                    ->label('Meal')
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -51,8 +59,15 @@ class FavoriteResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                Tables\Filters\Filter::make('with_user')
+                    ->label('With user only')
+                    ->default()
+                    ->query(fn (Builder $query) => $query->whereHas('user')),
+                Tables\Filters\Filter::make('orphaned')
+                    ->label('Orphaned (no user)')
+                    ->query(fn (Builder $query) => $query->whereDoesntHave('user')),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

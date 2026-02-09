@@ -58,9 +58,7 @@ class MealController extends Controller
                     'description' => $meal->description,
                     'image_url' => $meal->image_url,
                     'offer_title' => $meal->offer_title,
-                    'price' => $meal->price,
-                    'discount_price' => $meal->discount_price,
-                    'final_price' => $meal->final_price,
+                    ...$meal->getApiPriceAttributes(),
                     'has_offer' => $meal->hasOffer(),
                     'category' => [
                         'id' => $meal->category->id,
@@ -130,10 +128,8 @@ class MealController extends Controller
                         'description' => $meal->description,
                         'image_url' => $meal->image_url,
                         'offer_title' => $meal->offer_title,
-                        'price' => $meal->price,
-                        'discount_price' => $meal->discount_price,
-                        'final_price' => $meal->final_price,
-                        'has_offer' => $meal->hasOffer(),
+...$meal->getApiPriceAttributes(),
+                    'has_offer' => $meal->hasOffer(),
                         'category' => [
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
@@ -157,14 +153,14 @@ class MealController extends Controller
         }
     }
     /**
-     * Get today's meals
+     * Get today's deals (meals with active discounts)
      */
     public function today(Request $request): JsonResponse
     {
         try {
             $meals = Meal::with('category')
-                ->today()
                 ->available()
+                ->withActiveDiscount()
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($meal) {
@@ -175,10 +171,8 @@ class MealController extends Controller
                         'description' => $meal->description,
                         'image_url' => $meal->image_url,
                         'offer_title' => $meal->offer_title,
-                        'price' => $meal->price,
-                        'discount_price' => $meal->discount_price,
-                        'final_price' => $meal->final_price,
-                        'has_offer' => $meal->hasOffer(),
+...$meal->getApiPriceAttributes(),
+                    'has_offer' => $meal->hasOffer(),
                         'category' => [
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
@@ -190,13 +184,13 @@ class MealController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Today\'s meals retrieved successfully',
+                'message' => 'Today\'s deals retrieved successfully',
                 'data' => $meals,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve meals',
+                'message' => 'Failed to retrieve today\'s deals',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -231,14 +225,14 @@ class MealController extends Controller
                 $query->where('subcategory_id', $request->input('subcategory_id'));
             }
 
-            // FILTER by featured
-            if ($request->has('featured') && $request->boolean('featured')) {
-                $query->featured();
+            // FILTER by featured (featured=1/true → featured only, featured=0/false → non-featured only)
+            if ($request->has('featured')) {
+                $request->boolean('featured') ? $query->featured() : $query->where('is_featured', false);
             }
 
-            // FILTER by in stock
-            if ($request->has('in_stock') && $request->boolean('in_stock')) {
-                $query->inStock();
+            // FILTER by in stock (in_stock=1/true → in stock only, in_stock=0/false → out of stock only)
+            if ($request->has('in_stock')) {
+                $request->boolean('in_stock') ? $query->inStock() : $query->outOfStock();
             }
 
             // FILTER by price range
@@ -262,14 +256,16 @@ class MealController extends Controller
                 $query->where('brand', $request->input('brand'));
             }
 
-            // SORTING
+            // SORTING (sort_by: created_at|price|rating|title|sold_count|newest, sort_order: asc|desc)
             $sortBy = $request->input('sort_by', 'created_at');
-            $sortOrder = $request->input('sort_order', 'desc');
-
+            $sortOrder = strtolower($request->input('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
+            if ($sortBy === 'newest') {
+                $sortBy = 'created_at';
+                $sortOrder = 'desc';
+            }
             $allowedSortFields = ['created_at', 'price', 'rating', 'title', 'sold_count'];
             if (in_array($sortBy, $allowedSortFields)) {
                 if ($sortBy === 'price') {
-                    // Sort by final price (discount price if available, else regular price)
                     $query->orderByRaw('COALESCE(discount_price, price) ' . $sortOrder);
                 } else {
                     $query->orderBy($sortBy, $sortOrder);
@@ -293,12 +289,10 @@ class MealController extends Controller
                         'description' => $meal->description,
                         'image_url' => $meal->image_url,
                         'offer_title' => $meal->offer_title,
-                        'price' => $meal->price,
-                        'discount_price' => $meal->discount_price,
-                        'final_price' => $meal->final_price,
-                        'has_offer' => $meal->hasOffer(),
-                        'rating' => $meal->rating,
-                        'rating_count' => $meal->rating_count,
+...$meal->getApiPriceAttributes(),
+                    'has_offer' => $meal->hasOffer(),
+                        'rating' => (float) $meal->rating,
+                        'rating_count' => (int) $meal->rating_count,
                         'size' => $meal->size,
                         'brand' => $meal->brand,
                         'stock_quantity' => $meal->stock_quantity,
@@ -382,9 +376,7 @@ class MealController extends Controller
                     'description' => $meal->description,
                     'image_url' => $meal->image_url,
                     'offer_title' => $meal->offer_title,
-                    'price' => $meal->price,
-                    'discount_price' => $meal->discount_price,
-                    'final_price' => $meal->final_price,
+                    ...$meal->getApiPriceAttributes(),
                     'has_offer' => $meal->hasOffer(),
                     'is_featured' => $meal->is_featured,
                     'category' => [
@@ -450,14 +442,12 @@ class MealController extends Controller
                     'offer_title' => $meal->offer_title,
 
                     // Pricing
-                    'price' => $meal->price,
-                    'discount_price' => $meal->discount_price,
-                    'final_price' => $meal->final_price,
+                    ...$meal->getApiPriceAttributes(),
                     'has_offer' => $meal->hasOffer(),
 
                     // Rating
-                    'rating' => $meal->rating,
-                    'rating_count' => $meal->rating_count,
+                    'rating' => (float) $meal->rating,
+                    'rating_count' => (int) $meal->rating_count,
 
                     // Product details
                     'size' => $meal->size,

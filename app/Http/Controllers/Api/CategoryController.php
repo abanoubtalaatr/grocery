@@ -75,11 +75,9 @@ class CategoryController extends Controller
                             'description' => $meal->description,
                             'image_url' => $meal->image_url,
                             'offer_title' => $meal->offer_title,
-                            'price' => $meal->price,
-                            'discount_price' => $meal->discount_price,
-                            'final_price' => $meal->final_price,
-                            'rating' => $meal->rating,
-                            'rating_count' => $meal->rating_count,
+                            ...$meal->getApiPriceAttributes(),
+                            'rating' => (float) $meal->rating,
+                            'rating_count' => (int) $meal->rating_count,
                             'has_offer' => $meal->hasOffer(),
                             'is_featured' => $meal->is_featured,
                         ];
@@ -112,9 +110,9 @@ class CategoryController extends Controller
 
             $query = $category->meals()->with(['subcategory'])->available();
 
-            // Filter by featured if provided
-            if ($request->has('featured') && $request->boolean('featured')) {
-                $query->featured();
+            // Filter by featured if provided (featured=1/true → featured only, featured=0/false → non-featured only)
+            if ($request->has('featured')) {
+                $request->boolean('featured') ? $query->featured() : $query->where('is_featured', false);
             }
 
             // Filter by subcategory if provided
@@ -122,13 +120,31 @@ class CategoryController extends Controller
                 $query->where('subcategory_id', $request->input('subcategory_id'));
             }
 
-            // Filter by in stock only
-            if ($request->has('in_stock') && $request->boolean('in_stock')) {
-                $query->inStock();
+            // Filter by in stock (in_stock=1/true → in stock only, in_stock=0/false → out of stock only)
+            if ($request->has('in_stock')) {
+                $request->boolean('in_stock') ? $query->inStock() : $query->outOfStock();
+            }
+
+            // Sorting (sort_by: created_at|price|rating|title|sold_count, sort_order: asc|desc; "newest" = created_at desc)
+            $sortBy = $request->input('sort_by', 'created_at');
+            $sortOrder = strtolower($request->input('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
+            if ($sortBy === 'newest') {
+                $sortBy = 'created_at';
+                $sortOrder = 'desc';
+            }
+            $allowedSortFields = ['created_at', 'price', 'rating', 'title', 'sold_count'];
+            if (in_array($sortBy, $allowedSortFields)) {
+                if ($sortBy === 'price') {
+                    $query->orderByRaw('COALESCE(discount_price, price) ' . $sortOrder);
+                } else {
+                    $query->orderBy($sortBy, $sortOrder);
+                }
+            } else {
+                $query->orderBy('created_at', 'desc');
             }
 
             $perPage = min(max((int) $request->input('per_page', 15), 1), 50);
-            $paginator = $query->orderBy('created_at', 'desc')
+            $paginator = $query
                 ->paginate($perPage)
                 ->through(function ($meal) {
                     return [
@@ -139,15 +155,13 @@ class CategoryController extends Controller
                         'image_url' => $meal->image_url,
                         'offer_title' => $meal->offer_title,
 
-                        // Pricing
-                        'price' => $meal->price,
-                        'discount_price' => $meal->discount_price,
-                        'final_price' => $meal->final_price,
+// Pricing
+                        ...$meal->getApiPriceAttributes(),
                         'has_offer' => $meal->hasOffer(),
 
                         // Rating & Details
-                        'rating' => $meal->rating,
-                        'rating_count' => $meal->rating_count,
+                        'rating' => (float) $meal->rating,
+                        'rating_count' => (int) $meal->rating_count,
                         'size' => $meal->size,
                         'brand' => $meal->brand,
 

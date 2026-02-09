@@ -74,6 +74,23 @@ class User extends Authenticatable implements HasName
     ];
 
     /**
+     * Boot the model.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::saving(function (User $user) {
+            if ($user->email_verified && $user->email_verified_at === null) {
+                $user->email_verified_at = now();
+            }
+            if ($user->phone_verified && $user->phone_verified_at === null) {
+                $user->phone_verified_at = now();
+            }
+        });
+    }
+
+    /**
      * Scope a query to only include active users.
      */
     public function scopeActive($query)

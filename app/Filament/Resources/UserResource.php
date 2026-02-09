@@ -35,8 +35,6 @@ class UserResource extends Resource
                 Forms\Components\TextInput::make('email')
                     ->email()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('stripe_customer_id')
-                    ->maxLength(255),
                 Forms\Components\TextInput::make('phone')
                     ->tel()
                     ->maxLength(255),
@@ -50,12 +48,6 @@ class UserResource extends Resource
                     ->maxLength(255)
                     ->dehydrated(fn ($state) => filled($state))
                     ->dehydrateStateUsing(fn ($state) => \Hash::make($state)),
-                Forms\Components\Toggle::make('email_verified')
-                    ->required(),
-                Forms\Components\Toggle::make('phone_verified')
-                    ->required(),
-                Forms\Components\DateTimePicker::make('email_verified_at'),
-                Forms\Components\DateTimePicker::make('phone_verified_at'),
                 Forms\Components\Toggle::make('agree_terms')
                     ->required(),
                 Forms\Components\Toggle::make('is_active')
@@ -64,10 +56,6 @@ class UserResource extends Resource
                     ->label('Admin')
                     ->helperText('Grant admin access to this user')
                     ->required(),
-                Forms\Components\TextInput::make('google_id')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('avatar')
-                    ->maxLength(255),
             ]);
     }
 

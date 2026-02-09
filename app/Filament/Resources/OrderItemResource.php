@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\OrderItemResource\Pages;
 use App\Filament\Resources\OrderItemResource\RelationManagers;
+use App\Filament\Resources\OrderResource;
 use App\Models\OrderItem;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -25,24 +26,46 @@ class OrderItemResource extends Resource
             ->schema([
                 Forms\Components\Select::make('order_id')
                     ->relationship('order', 'id')
-                    ->required(),
+                    ->required()
+                    ->label('Order'),
                 Forms\Components\Select::make('meal_id')
                     ->relationship('meal', 'title')
-                    ->required(),
+                    ->required()
+                    ->label('Meal'),
                 Forms\Components\TextInput::make('quantity')
+                    ->label('Quantity')
                     ->required()
                     ->numeric()
-                    ->default(1),
+                    ->integer()
+                    ->minValue(1)
+                    ->default(1)
+                    ->rules(['required', 'integer', 'min:1'])
+                    ->validationMessages(['min' => 'Value must be greater than zero.']),
                 Forms\Components\TextInput::make('unit_price')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('discount_amount')
+                    ->label('Unit price')
                     ->required()
                     ->numeric()
-                    ->default(0.00),
-                Forms\Components\TextInput::make('subtotal')
+                    ->minValue(0)
+                    ->step(0.01)
+                    ->rules(['required', 'numeric', 'min:0'])
+                    ->validationMessages(['min' => 'Value must be greater than or equal to zero.']),
+                Forms\Components\TextInput::make('discount_amount')
+                    ->label('Discount amount')
                     ->required()
-                    ->numeric(),
+                    ->numeric()
+                    ->minValue(0)
+                    ->step(0.01)
+                    ->default(0)
+                    ->rules(['required', 'numeric', 'min:0'])
+                    ->validationMessages(['min' => 'Value must be greater than or equal to zero.']),
+                Forms\Components\TextInput::make('subtotal')
+                    ->label('Subtotal')
+                    ->required()
+                    ->numeric()
+                    ->minValue(0)
+                    ->step(0.01)
+                    ->rules(['required', 'numeric', 'min:0'])
+                    ->validationMessages(['min' => 'Value must be greater than or equal to zero.']),
             ]);
     }
 
@@ -50,24 +73,29 @@ class OrderItemResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('order.id')
-                    ->numeric()
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('order.order_number')
+                    ->label('Order')
+                    ->searchable()
+                    ->sortable()
+                    ->url(fn ($record) => OrderResource::getUrl('edit', ['record' => $record->order_id])),
                 Tables\Columns\TextColumn::make('meal.title')
-                    ->numeric()
+                    ->label('Product')
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('quantity')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->alignCenter(),
                 Tables\Columns\TextColumn::make('unit_price')
-                    ->numeric()
+                    ->money('USD')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('discount_amount')
-                    ->numeric()
+                    ->money('USD')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('subtotal')
-                    ->numeric()
-                    ->sortable(),
+                    ->money('USD')
+                    ->sortable()
+                    ->weight('bold'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -77,6 +105,7 @@ class OrderItemResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('order_id')
             ->filters([
                 //
             ])

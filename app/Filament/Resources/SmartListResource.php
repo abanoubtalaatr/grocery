@@ -74,7 +74,7 @@ class SmartListResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\MealsRelationManager::class,
         ];
     }
 

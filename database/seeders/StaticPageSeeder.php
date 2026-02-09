@@ -20,30 +20,12 @@ class StaticPageSeeder extends Seeder
                 'is_published' => true
             ],
             [
-                'slug' => 'privacy-policy',
-                'title' => 'Privacy Policy',
-                'content' => $this->getPrivacyContent(),
-                'meta_title' => 'Privacy Policy',
-                'meta_description' => 'Learn about our privacy practices',
+                'slug' => 'policies',
+                'title' => 'Policies',
+                'content' => $this->getPoliciesContent(),
+                'meta_title' => 'Policies - Privacy, Return, Refund & Cookie',
+                'meta_description' => 'Our privacy policy, return policy, refund policy and cookie policy',
                 'order' => 2,
-                'is_published' => true
-            ],
-            [
-                'slug' => 'return-policy',
-                'title' => 'Return Policy',
-                'content' => $this->getReturnContent(),
-                'meta_title' => 'Return Policy',
-                'meta_description' => 'Learn about our return policy',
-                'order' => 3,
-                'is_published' => true
-            ],
-            [
-                'slug' => 'cookie-policy',
-                'title' => 'Cookie Policy',
-                'content' => $this->getCookieContent(),
-                'meta_title' => 'Cookie Policy',
-                'meta_description' => 'Learn about our cookie policy',
-                'order' => 4,
                 'is_published' => true
             ],
             [
@@ -63,15 +45,6 @@ class StaticPageSeeder extends Seeder
                 'meta_description' => 'Get in touch with us',
                 'order' => 4,
                 'is_published' => true
-            ],
-            [
-                'slug' => 'refund-policy',
-                'title' => 'Refund Policy',
-                'content' => $this->getRefundContent(),
-                'meta_title' => 'Refund Policy',
-                'meta_description' => 'Our refund and return policy',
-                'order' => 5,
-                'is_published' => true
             ]
         ];
 
@@ -81,6 +54,18 @@ class StaticPageSeeder extends Seeder
                 $page
             );
         }
+
+        // Unpublish or remove old separate policy pages so only the combined Policies page is used
+        StaticPage::whereIn('slug', ['privacy-policy', 'return-policy', 'cookie-policy', 'refund-policy'])
+            ->update(['is_published' => false]);
+    }
+
+    private function getPoliciesContent(): string
+    {
+        return $this->getPrivacyContent() . "\n\n" .
+            $this->getReturnContent() . "\n\n" .
+            $this->getRefundContent() . "\n\n" .
+            $this->getCookieContent();
     }
 
     private function getReturnContent(): string

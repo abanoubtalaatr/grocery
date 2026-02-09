@@ -22,7 +22,20 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'login' => ['required', 'string'],
+            'login' => [
+                'required',
+                'string',
+                // Custom validation: Check active user by email or phone, not soft deleted
+                function ($attribute, $value, $fail) {
+                    $user = \App\Models\User::where('email', $value)
+                        ->orWhere('phone', $value)
+                        ->first();
+
+                    if (!$user || $user->deleted_at !== null) {
+                        $fail(__('auth.failed')); // Returns "These credentials do not match our records."
+                    }
+                }
+            ],
             'password' => ['required', 'string'],
         ];
     }

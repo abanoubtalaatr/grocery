@@ -34,14 +34,12 @@ class FavoriteController extends Controller
                         'offer_title' => $meal->offer_title,
                         
                         // Pricing
-                        'price' => $meal->price,
-                        'discount_price' => $meal->discount_price,
-                        'final_price' => $meal->final_price,
+                        ...$meal->getApiPriceAttributes(),
                         'has_offer' => $meal->hasOffer(),
                         
                         // Rating & Details
-                        'rating' => $meal->rating,
-                        'rating_count' => $meal->rating_count,
+                        'rating' => (float) $meal->rating,
+                        'rating_count' => (int) $meal->rating_count,
                         'size' => $meal->size,
                         'brand' => $meal->brand,
                         

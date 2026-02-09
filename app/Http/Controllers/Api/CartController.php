@@ -106,8 +106,8 @@ class CartController extends Controller
             } else {
                 // Create new cart item
                 $discountAmount = 0;
-                if ($meal->discount_price) {
-                    $discountAmount = ($meal->price - $meal->discount_price) * $validated['quantity'];
+                if ($meal->resolved_discount_price) {
+                    $discountAmount = ($meal->price - $meal->resolved_discount_price) * $validated['quantity'];
                 }
 
                 $cartItem = $cart->items()->create([
@@ -293,10 +293,8 @@ class CartController extends Controller
                         'title' => $item->meal->title,
                         'slug' => $item->meal->slug,
                         'image_url' => $item->meal->image_url,
-                        'price' => $item->meal->price,
-                        'discount_price' => $item->meal->discount_price,
-                        'final_price' => $item->meal->final_price,
-                        'rating' => $item->meal->rating,
+                        ...$item->meal->getApiPriceAttributes(),
+                        'rating' => (float) $item->meal->rating,
                         'size' => $item->meal->size,
                         'brand' => $item->meal->brand,
                         'stock_quantity' => $item->meal->stock_quantity,
@@ -312,16 +310,16 @@ class CartController extends Controller
                         ] : null,
                     ],
                     'quantity' => $item->quantity,
-                    'unit_price' => $item->unit_price,
-                    'discount_amount' => $item->discount_amount,
-                    'subtotal' => $item->subtotal,
+                    'unit_price' => (float) $item->unit_price,
+                    'discount_amount' => (float) $item->discount_amount,
+                    'subtotal' => (float) $item->subtotal,
                 ];
             }),
             'item_count' => $cart->item_count,
-            'subtotal' => $cart->subtotal,
-            'tax' => $cart->tax,
-            'discount' => $cart->discount,
-            'total' => $cart->total,
+            'subtotal' => (float) $cart->subtotal,
+            'tax' => (float) $cart->tax,
+            'discount' => (float) $cart->discount,
+            'total' => (float) $cart->total,
             'is_empty' => $cart->isEmpty(),
             'created_at' => $cart->created_at,
             'updated_at' => $cart->updated_at,

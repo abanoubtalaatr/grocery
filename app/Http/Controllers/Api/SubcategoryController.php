@@ -88,10 +88,8 @@ class SubcategoryController extends Controller
                             'title' => $meal->title,
                             'slug' => $meal->slug,
                             'image_url' => $meal->image_url,
-                            'price' => $meal->price,
-                            'discount_price' => $meal->discount_price,
-                            'final_price' => $meal->final_price,
-                            'rating' => $meal->rating,
+                            ...$meal->getApiPriceAttributes(),
+                            'rating' => (float) $meal->rating,
                             'is_featured' => $meal->is_featured,
                         ];
                     }),
@@ -115,40 +113,64 @@ class SubcategoryController extends Controller
     }
 
     /**
-     * Get meals by subcategory
+     * Get meals by subcategory (paginated)
      */
     public function meals(string $id, Request $request): JsonResponse
     {
         try {
             $subcategory = Subcategory::findOrFail($id);
-            
+
             $query = $subcategory->meals()->with('category')->available();
 
-            // Filter by featured if provided
-            if ($request->has('featured') && $request->boolean('featured')) {
-                $query->featured();
+            // Filter by featured if provided (featured=1/true → featured only, featured=0/false → non-featured only)
+            if ($request->has('featured')) {
+                $request->boolean('featured') ? $query->featured() : $query->where('is_featured', false);
             }
 
-            $meals = $query->orderBy('created_at', 'desc')
-                ->get()
-                ->map(function ($meal) {
-                    return [
-                        'id' => $meal->id,
-                        'title' => $meal->title,
-                        'slug' => $meal->slug,
-                        'description' => $meal->description,
-                        'image_url' => $meal->image_url,
-                        'offer_title' => $meal->offer_title,
-                        'price' => $meal->price,
-                        'discount_price' => $meal->discount_price,
-                        'final_price' => $meal->final_price,
-                        'rating' => $meal->rating,
-                        'rating_count' => $meal->rating_count,
-                        'has_offer' => $meal->hasOffer(),
-                        'is_featured' => $meal->is_featured,
-                        'in_stock' => $meal->isInStock(),
-                    ];
-                });
+            // Filter by in stock (in_stock=1/true → in stock only, in_stock=0/false → out of stock only)
+            if ($request->has('in_stock')) {
+                $request->boolean('in_stock') ? $query->inStock() : $query->outOfStock();
+            }
+
+            // Sorting (sort_by: created_at|price|rating|title|sold_count|newest, sort_order: asc|desc)
+            $sortBy = $request->input('sort_by', 'created_at');
+            $sortOrder = strtolower($request->input('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
+            if ($sortBy === 'newest') {
+                $sortBy = 'created_at';
+                $sortOrder = 'desc';
+            }
+            $allowedSortFields = ['created_at', 'price', 'rating', 'title', 'sold_count'];
+            if (in_array($sortBy, $allowedSortFields)) {
+                if ($sortBy === 'price') {
+                    $query->orderByRaw('COALESCE(discount_price, price) ' . $sortOrder);
+                } else {
+                    $query->orderBy($sortBy, $sortOrder);
+                }
+            } else {
+                $query->orderBy('created_at', 'desc');
+            }
+
+            $perPage = min(max((int) $request->input('per_page', 15), 1), 50);
+            $paginator = $query
+                ->paginate($perPage)
+                ->withQueryString();
+
+            $meals = $paginator->getCollection()->map(function ($meal) {
+                return [
+                    'id' => $meal->id,
+                    'title' => $meal->title,
+                    'slug' => $meal->slug,
+                    'description' => $meal->description,
+                    'image_url' => $meal->image_url,
+                    'offer_title' => $meal->offer_title,
+                    ...$meal->getApiPriceAttributes(),
+                    'rating' => (float) $meal->rating,
+                    'rating_count' => (int) $meal->rating_count,
+                    'has_offer' => $meal->hasOffer(),
+                    'is_featured' => $meal->is_featured,
+                    'in_stock' => $meal->isInStock(),
+                ];
+            });
 
             return response()->json([
                 'success' => true,
@@ -159,7 +181,15 @@ class SubcategoryController extends Controller
                         'name' => $subcategory->name,
                         'slug' => $subcategory->slug,
                     ],
-                    'meals' => $meals,
+                    'meals' => $meals->values()->all(),
+                    'pagination' => [
+                        'current_page' => $paginator->currentPage(),
+                        'last_page' => $paginator->lastPage(),
+                        'per_page' => $paginator->perPage(),
+                        'total' => $paginator->total(),
+                        'from' => $paginator->firstItem(),
+                        'to' => $paginator->lastItem(),
+                    ],
                 ],
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
