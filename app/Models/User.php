@@ -24,6 +24,8 @@ class User extends Authenticatable implements HasName
         'username',
         'firstname',
         'lastname',
+        'gender',
+        'birthday',
         'email',
         'phone',
         'country_code',
@@ -62,6 +64,7 @@ class User extends Authenticatable implements HasName
     protected $casts = [
         'email_verified_at' => 'datetime',
         'phone_verified_at' => 'datetime',
+        'birthday' => 'date',
         'password' => 'hashed',
         'email_verified' => 'boolean',
         'phone_verified' => 'boolean',
@@ -276,13 +279,19 @@ class User extends Authenticatable implements HasName
         return $this->hasOne(UserNotificationSetting::class);
     }
 
+    /**
+     * Get or create user notification settings. Returns the settings model so the API never receives null.
+     */
     public function initializeNotificationSettings()
     {
-        
-        if (!$this->notificationSettings) {
-            $this->notificationSettings()->create();
+        $settings = $this->notificationSettings;
+
+        if (! $settings) {
+            $settings = $this->notificationSettings()->create([]);
+            $this->setRelation('notificationSettings', $settings);
         }
-        return $this->notificationSettings;
+
+        return $settings;
     }
 
     /**

@@ -12,9 +12,17 @@ class SmartList extends Model
 
     protected $fillable = [
         'name',
+        'category',
         'description',
         'image',
         'user_id',
+        'notify_on_price_drop',
+        'notify_on_offers',
+    ];
+
+    protected $casts = [
+        'notify_on_price_drop' => 'boolean',
+        'notify_on_offers' => 'boolean',
     ];
 
     public function user()

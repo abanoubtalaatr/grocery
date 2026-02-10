@@ -34,9 +34,9 @@ class RegisterRequest extends FormRequest
             ],
             'email' => [
                 'nullable',
+                'email',
                 'max:255',
                 'required_without:phone',
-                'regex:/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/',
                 // Only unique among accounts that are not soft-deleted
                 'unique:users,email,NULL,id,deleted_at,NULL'
             ],
@@ -67,6 +67,7 @@ class RegisterRequest extends FormRequest
             'username.unique' => 'This username is already taken.',
             'username.alpha_dash' => 'Username may only contain letters, numbers, dashes and underscores.',
             'email.required_without' => 'Either email or phone number is required.',
+            'email.email' => 'Please enter a valid email address (e.g., example@example.com).',
             'email.unique' => 'This email is already registered.',
             'phone.required_without' => 'Either phone number or email is required.',
             'phone.unique' => 'This phone number is already registered.',

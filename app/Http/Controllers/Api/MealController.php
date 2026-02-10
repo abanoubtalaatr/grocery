@@ -4,21 +4,53 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Meal;
+use App\Services\FrequencyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class MealController extends Controller
 {
-
-    public function frequency(Request $request)
+    /**
+     * Get meals the authenticated user orders most often (personalized by frequency type).
+     * Query param: frequency_type = daily|weekly|monthly (default: weekly).
+     */
+    public function frequency(Request $request): JsonResponse
     {
-        $meals = Meal::with('category')
-            ->available()
-            ->get();
+        $frequencyType = $request->input('frequency_type', FrequencyService::FREQUENCY_WEEKLY);
+        if (! in_array($frequencyType, FrequencyService::VALID_TYPES, true)) {
+            $frequencyType = FrequencyService::FREQUENCY_WEEKLY;
+        }
+
+        $user = $request->user();
+        $service = app(FrequencyService::class);
+        $meals = $service->getFrequentlyOrderedMeals($user, $frequencyType);
+
+        $data = $meals->map(function ($meal) {
+            return [
+                'id' => $meal->id,
+                'title' => $meal->title,
+                'slug' => $meal->slug,
+                'description' => $meal->description,
+                'image_url' => $meal->image_url,
+                'offer_title' => $meal->offer_title,
+                ...$meal->getApiPriceAttributes(),
+                'has_offer' => $meal->hasOffer(),
+                'category' => $meal->category ? [
+                    'id' => $meal->category->id,
+                    'name' => $meal->category->name,
+                ] : null,
+                'features' => $meal->features,
+                'available_date' => $meal->available_date,
+                'created_at' => $meal->created_at,
+                'order_count' => (int) $meal->getAttribute('order_count'),
+            ];
+        })->values();
+
         return response()->json([
             'success' => true,
-            'message' => 'Featured retrieved successfully',
-            'data' => $meals,
+            'message' => 'Frequency meals retrieved successfully',
+            'frequency_type' => $frequencyType,
+            'data' => $data,
         ]);
     }
     
@@ -64,6 +96,7 @@ class MealController extends Controller
                         'id' => $meal->category->id,
                         'name' => $meal->category->name,
                     ],
+                    'features' => $meal->features,
                     'available_date' => $meal->available_date,
                     'created_at' => $meal->created_at,
                 ];
@@ -111,13 +144,14 @@ class MealController extends Controller
         }
     }
     /**
-     * Get today's meals
+     * Get hot / Ready-to-eat meals only.
      */
     public function hot(Request $request): JsonResponse
     {
         try {
             $meals = Meal::with('category')
                 ->available()
+                ->hot()
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($meal) {
@@ -134,6 +168,7 @@ class MealController extends Controller
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
                         ],
+                        'features' => $meal->features,
                         'available_date' => $meal->available_date,
                         'created_at' => $meal->created_at,
                     ];
@@ -141,13 +176,13 @@ class MealController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Today\'s meals retrieved successfully',
+                'message' => 'Hot meals retrieved successfully',
                 'data' => $meals,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve meals',
+                'message' => 'Failed to retrieve hot meals',
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -177,6 +212,7 @@ class MealController extends Controller
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
                         ],
+                        'features' => $meal->features,
                         'available_date' => $meal->available_date,
                         'created_at' => $meal->created_at,
                     ];
@@ -307,16 +343,19 @@ class MealController extends Controller
                             'id' => $meal->subcategory->id,
                             'name' => $meal->subcategory->name,
                         ] : null,
+                        'features' => $meal->features,
                         'is_favorited' => in_array($meal->id, $favoriteMealIds),
                         'created_at' => $meal->created_at,
                     ];
                 });
 
-            return response()->json([
+            $totalCount = $meals->count();
+            $isEmpty = $totalCount === 0;
+            return response()->json(array_merge([
                 'success' => true,
-                'message' => 'Meals retrieved successfully',
+                'message' => $isEmpty ? 'No products match your filters.' : 'Meals retrieved successfully',
                 'data' => $meals,
-                'total_count' => $meals->count(),
+                'total_count' => $totalCount,
                 'filters_applied' => [
                     'search' => $request->input('search'),
                     'category_id' => $request->input('category_id'),
@@ -330,7 +369,7 @@ class MealController extends Controller
                     'sort_by' => $sortBy,
                     'sort_order' => $sortOrder,
                 ],
-            ]);
+            ], $isEmpty ? ['empty_message' => 'No products match the applied filters. Try adjusting your search or filters.'] : []));
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -384,6 +423,7 @@ class MealController extends Controller
                         'name' => $meal->category->name,
                         'slug' => $meal->category->slug,
                     ],
+                    'features' => $meal->features,
                     'recommendation_reason' => $this->getRecommendationReason($meal),
                 ];
             });
@@ -428,7 +468,11 @@ class MealController extends Controller
     public function show(string $id): JsonResponse
     {
         try {
-            $meal = Meal::with(['category', 'subcategory','reviews'])->findOrFail($id);
+            $meal = Meal::with([
+                'category',
+                'subcategory',
+                'reviews' => fn ($q) => $q->approved()->with('user:id,username,firstname,lastname')->orderBy('created_at', 'desc'),
+            ])->findOrFail($id);
 
             return response()->json([
                 'success' => true,
@@ -480,11 +524,16 @@ class MealController extends Controller
                     'reviews' => $meal->reviews->map(function ($review) {
                         return [
                             'id' => $review->id,
-                            'rating' => $review->rating,
+                            'user' => $review->relationLoaded('user') && $review->user ? [
+                                'id' => $review->user->id,
+                                'name' => $review->user->full_name ?? $review->user->username ?? 'User',
+                            ] : null,
+                            'rating' => (int) $review->rating,
                             'comment' => $review->comment,
-                            'images' => $review->images,
+                            'images' => $review->images ?? [],
+                            'created_at' => $review->created_at?->toIso8601String(),
                         ];
-                    }),
+                    })->values(),
                     'subcategory' => $meal->subcategory ? [
                         'id' => $meal->subcategory->id,
                         'name' => $meal->subcategory->name,

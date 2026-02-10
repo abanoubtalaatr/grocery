@@ -78,15 +78,15 @@ class AddressController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'label' => ['nullable', 'string', 'max:255'],
-                'full_name' => ['required', 'string', 'max:255'],
-                'phone' => ['required', 'string', 'max:20', 'regex:/^\+?[1-9]\d{1,14}$/'],
+                'full_name' => ['required', 'string', 'min:2', 'max:255'],
+                'phone' => ['required', 'string', 'min:10', 'max:20', 'regex:/^\+?[1-9]\d{9,14}$/'],
                 'country_code' => ['nullable', 'string', 'max:5', 'regex:/^\+\d{1,4}$/'],
-                'street_address' => ['required', 'string', 'max:500'],
+                'street_address' => ['required', 'string', 'min:5', 'max:500'],
                 'building_number' => ['nullable', 'string', 'max:50'],
                 'floor' => ['nullable', 'string', 'max:50'],
                 'apartment' => ['nullable', 'string', 'max:50'],
                 'landmark' => ['nullable', 'string', 'max:255'],
-                'city' => ['required', 'string', 'max:100'],
+                'city' => ['required', 'string', 'min:2', 'max:100'],
                 'state' => ['nullable', 'string', 'max:100'],
                 'postal_code' => ['nullable', 'string', 'max:20'],
                 'country' => ['nullable', 'string', 'max:100'],
@@ -94,6 +94,12 @@ class AddressController extends Controller
                 'is_default' => ['nullable', 'boolean'],
                 'latitude' => ['nullable', 'numeric', 'between:-90,90'],
                 'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            ], [
+                'full_name.min' => 'Full name must be at least 2 characters.',
+                'phone.min' => 'Phone number must be at least 10 digits.',
+                'phone.regex' => 'Please enter a valid phone number (with country code if needed).',
+                'street_address.min' => 'Street address must be at least 5 characters.',
+                'city.min' => 'City must be at least 2 characters.',
             ]);
 
             if ($validator->fails()) {
@@ -110,11 +116,17 @@ class AddressController extends Controller
 
             // If this is the first address, make it default
             $isFirstAddress = $user->addresses()->count() === 0;
-            
-            $address = $user->addresses()->create(array_merge(
+            $data = array_merge(
                 $validator->validated(),
                 ['is_default' => $request->boolean('is_default') || $isFirstAddress]
-            ));
+            );
+            // Normalize phone: if phone already starts with country code, store only the national part
+            $phone = trim($data['phone'] ?? '');
+            $code = trim($data['country_code'] ?? '');
+            if ($code !== '' && str_starts_with($phone, $code)) {
+                $data['phone'] = substr($phone, strlen($code));
+            }
+            $address = $user->addresses()->create($data);
 
             DB::commit();
 
@@ -144,15 +156,15 @@ class AddressController extends Controller
 
             $validator = Validator::make($request->all(), [
                 'label' => ['sometimes', 'string', 'max:255'],
-                'full_name' => ['sometimes', 'string', 'max:255'],
-                'phone' => ['sometimes', 'string', 'max:20', 'regex:/^\+?[1-9]\d{1,14}$/'],
-                'country_code' => ['sometimes', 'string', 'max:5', 'regex:/^\+\d{1,4}$/'],
-                'street_address' => ['sometimes', 'string', 'max:500'],
+                'full_name' => ['sometimes', 'string', 'min:2', 'max:255'],
+                'phone' => ['sometimes', 'string', 'min:10', 'max:20', 'regex:/^\+?[1-9]\d{9,14}$/'],
+                'country_code' => ['sometimes', 'nullable', 'string', 'max:5', 'regex:/^\+\d{1,4}$/'],
+                'street_address' => ['sometimes', 'string', 'min:5', 'max:500'],
                 'building_number' => ['nullable', 'string', 'max:50'],
                 'floor' => ['nullable', 'string', 'max:50'],
                 'apartment' => ['nullable', 'string', 'max:50'],
                 'landmark' => ['nullable', 'string', 'max:255'],
-                'city' => ['sometimes', 'string', 'max:100'],
+                'city' => ['sometimes', 'string', 'min:2', 'max:100'],
                 'state' => ['nullable', 'string', 'max:100'],
                 'postal_code' => ['nullable', 'string', 'max:20'],
                 'country' => ['nullable', 'string', 'max:100'],
@@ -172,7 +184,12 @@ class AddressController extends Controller
 
             DB::beginTransaction();
 
-            $address->update($validator->validated());
+            $updateData = $validator->validated();
+            // Normalize phone on update: if phone already starts with country code, store only national part
+            if (isset($updateData['phone'], $updateData['country_code']) && $updateData['country_code'] !== '' && str_starts_with(trim($updateData['phone']), $updateData['country_code'])) {
+                $updateData['phone'] = substr(trim($updateData['phone']), strlen($updateData['country_code']));
+            }
+            $address->fill($updateData)->save();
 
             DB::commit();
 

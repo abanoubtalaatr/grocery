@@ -23,9 +23,12 @@ class SmartListRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'max:100'],
+            'description' => ['nullable', 'string', 'max:500'],
             'image' => ['nullable', 'image', 'max:2048'],
-            'meal_ids' => ['required', 'array'],
+            'notify_on_price_drop' => ['sometimes', 'boolean'],
+            'notify_on_offers' => ['sometimes', 'boolean'],
+            'meal_ids' => ['sometimes', 'array'],
             'meal_ids.*' => ['required', 'exists:meals,id'],
         ];
     }

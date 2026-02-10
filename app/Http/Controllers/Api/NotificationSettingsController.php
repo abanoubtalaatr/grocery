@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\UpdateNotificationCategoryRequest;
+use App\Http\Requests\Api\UpdateNotificationSettingsRequest;
 use App\Models\UserNotificationSetting;
-use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 
 class NotificationSettingsController extends Controller
@@ -14,41 +16,29 @@ class NotificationSettingsController extends Controller
      */
     public function index()
     {
-        $user = Auth::user();
-        $settings = $user->initializeNotificationSettings();
+        try {
+            $user = Auth::user();
+            $settings = $user->initializeNotificationSettings();
 
-        return response()->json([
-            'success' => true,
-            'data' => $this->formatSettings($settings)
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => $settings ? $this->formatSettings($settings) : $this->defaultSettingsStructure(),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => true,
+                'data' => $this->defaultSettingsStructure(),
+            ]);
+        }
     }
 
     /**
-     * Update notification settings
+     * Update notification settings.
+     * Only accepts true, false, 0, or 1 for each setting; invalid values (e.g. 4) return 422.
      */
-    public function update(Request $request)
+    public function update(UpdateNotificationSettingsRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            // Order & Delivery Updates
-            'order_confirmation' => 'sometimes|boolean',
-            'order_shipped' => 'sometimes|boolean',
-            'delivery_updates' => 'sometimes|boolean',
-            'out_of_stock_alerts' => 'sometimes|boolean',
-            
-            // Deals & Promotions
-            'weekly_discounts' => 'sometimes|boolean',
-            'exclusive_member_offers' => 'sometimes|boolean',
-            'seasonal_campaigns' => 'sometimes|boolean',
-            
-            // Account & Reminders
-            'cart_reminders' => 'sometimes|boolean',
-            'payment_billing' => 'sometimes|boolean',
-            
-            // Channels
-            'email_notifications' => 'sometimes|boolean',
-            'push_notifications' => 'sometimes|boolean',
-            'sms_notifications' => 'sometimes|boolean',
-        ]);
+        $validated = $request->validated();
 
         $user = Auth::user();
         $settings = $user->initializeNotificationSettings();
@@ -57,43 +47,87 @@ class NotificationSettingsController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Notification settings updated successfully',
-            'data' => $this->formatSettings($settings->fresh())
+            'data' => $this->formatSettings($settings->fresh()),
         ]);
     }
 
     /**
-     * Update specific category settings
+     * Update specific category settings.
+     * Only accepts true, false, 0, or 1 for enabled; invalid values return 422.
      */
-    public function updateCategory(Request $request, string $category)
+    public function updateCategory(UpdateNotificationCategoryRequest $request, string $category): JsonResponse
     {
-        $validated = $request->validate([
-            'enabled' => 'required|boolean',
-        ]);
+        $validated = $request->validated();
 
         $user = Auth::user();
         $settings = $user->initializeNotificationSettings();
 
         $fields = $this->getCategoryFields($category);
-        
+
         if (empty($fields)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid category'
+                'message' => 'Invalid category',
             ], 400);
         }
 
         $updateData = [];
         foreach ($fields as $field) {
-            $updateData[$field] = $validated['enabled'];
+            $updateData[$field] = (bool) $validated['enabled'];
         }
 
         $settings->update($updateData);
 
         return response()->json([
             'success' => true,
-            'message' => "{$category} notifications updated successfully",
-            'data' => $this->formatSettings($settings->fresh())
+            'message' => 'Notification settings updated successfully',
+            'data' => $this->formatSettings($settings->fresh()),
         ]);
+    }
+
+    /**
+     * Default settings structure (matches migration defaults) when no record exists or on error.
+     */
+    private function defaultSettingsStructure(): array
+    {
+        return [
+            'order_delivery_updates' => [
+                'category' => 'Order & Delivery Updates',
+                'enabled' => true,
+                'settings' => [
+                    'order_confirmation' => true,
+                    'order_shipped' => true,
+                    'delivery_updates' => true,
+                    'out_of_stock_alerts' => true,
+                ],
+            ],
+            'deals_promotions' => [
+                'category' => 'Deals & Promotions',
+                'enabled' => true,
+                'settings' => [
+                    'weekly_discounts' => true,
+                    'exclusive_member_offers' => true,
+                    'seasonal_campaigns' => true,
+                ],
+            ],
+            'account_reminders' => [
+                'category' => 'Account & Reminders',
+                'enabled' => true,
+                'settings' => [
+                    'cart_reminders' => true,
+                    'payment_billing' => true,
+                ],
+            ],
+            'channels' => [
+                'category' => 'Notification Channels',
+                'enabled' => true,
+                'settings' => [
+                    'email_notifications' => true,
+                    'push_notifications' => true,
+                    'sms_notifications' => false,
+                ],
+            ],
+        ];
     }
 
     /**

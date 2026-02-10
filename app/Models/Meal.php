@@ -39,6 +39,7 @@ class Meal extends Model
         'sold_count',
         'is_featured',
         'is_available',
+        'is_hot',
         'available_date',
     ];
 
@@ -56,6 +57,7 @@ class Meal extends Model
         'sold_count' => 'integer',
         'is_featured' => 'boolean',
         'is_available' => 'boolean',
+        'is_hot' => 'boolean',
         'available_date' => 'date',
         'expiry_date' => 'date',
     ];
@@ -118,6 +120,14 @@ class Meal extends Model
     public function scopeFeatured($query)
     {
         return $query->where('is_featured', true);
+    }
+
+    /**
+     * Scope: only Ready-to-eat / Hot meals (for Hot Meals API).
+     */
+    public function scopeHot($query)
+    {
+        return $query->where('is_hot', true);
     }
 
     /**

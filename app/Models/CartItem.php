@@ -64,10 +64,24 @@ class CartItem extends Model
 
     /**
      * Calculate subtotal for this cart item.
+     * Recomputes unit_price, discount_amount and subtotal from the meal when possible so quantity changes keep totals correct.
+     * Item subtotal = amount to pay for this line (final_price × quantity); discount_amount is for display only.
      */
     public function calculateSubtotal(): void
     {
-        $this->subtotal = ($this->unit_price * $this->quantity) - $this->discount_amount;
+        $this->loadMissing('meal');
+
+        if ($this->meal) {
+            $meal = $this->meal;
+            $this->unit_price = (float) $meal->final_price;
+            if ($meal->resolved_discount_price !== null) {
+                $this->discount_amount = ($meal->price - $meal->resolved_discount_price) * $this->quantity;
+            } else {
+                $this->discount_amount = 0;
+            }
+        }
+
+        $this->subtotal = $this->unit_price * $this->quantity;
     }
 
     /**

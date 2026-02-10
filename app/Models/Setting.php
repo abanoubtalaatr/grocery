@@ -38,6 +38,8 @@ class Setting extends Model
         'tax_rate',
         'payment_methods',
         'shipping_note',
+        'shipping_fee',
+        'free_shipping_min_order',
         'locale',
         'timezone',
     ];
@@ -45,6 +47,8 @@ class Setting extends Model
     protected $casts = [
         'maintenance_mode' => 'boolean',
         'tax_rate' => 'decimal:2',
+        'shipping_fee' => 'decimal:2',
+        'free_shipping_min_order' => 'decimal:2',
         'payment_methods' => 'array',
     ];
 

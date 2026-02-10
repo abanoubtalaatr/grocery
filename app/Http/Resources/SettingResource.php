@@ -29,6 +29,10 @@ class SettingResource extends JsonResource
                 'logo' => $this->logo,
                 'favicon' => $this->favicon,
             ],
+            'shipping' => [
+                'shipping_fee' => (float) ($this->shipping_fee ?? 0),
+                'free_shipping_min_order' => $this->free_shipping_min_order !== null ? (float) $this->free_shipping_min_order : null,
+            ],
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
         ];

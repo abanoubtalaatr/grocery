@@ -80,6 +80,7 @@ class CategoryController extends Controller
                             'rating_count' => (int) $meal->rating_count,
                             'has_offer' => $meal->hasOffer(),
                             'is_featured' => $meal->is_featured,
+                            'features' => $meal->features,
                         ];
                     }),
                     'created_at' => $category->created_at,
@@ -175,6 +176,9 @@ class CategoryController extends Controller
                         'days_until_expiry' => $meal->daysUntilExpiry(),
                         'is_expired' => $meal->isExpired(),
 
+                        // Features
+                        'features' => $meal->features,
+
                         // Subcategory
                         'subcategory' => $meal->subcategory ? [
                             'id' => $meal->subcategory->id,
@@ -184,9 +188,10 @@ class CategoryController extends Controller
                     ];
                 });
 
-            return response()->json([
+            $total = $paginator->total();
+            return response()->json(array_merge([
                 'success' => true,
-                'message' => 'Meals retrieved successfully',
+                'message' => $total === 0 ? 'No products match your filters.' : 'Meals retrieved successfully',
                 'data' => [
                     'category' => [
                         'id' => $category->id,
@@ -198,12 +203,12 @@ class CategoryController extends Controller
                         'current_page' => $paginator->currentPage(),
                         'last_page' => $paginator->lastPage(),
                         'per_page' => $paginator->perPage(),
-                        'total' => $paginator->total(),
+                        'total' => $total,
                         'from' => $paginator->firstItem(),
                         'to' => $paginator->lastItem(),
                     ],
                 ],
-            ]);
+            ], $total === 0 ? ['empty_message' => 'No products match the applied filters. Try adjusting your filters.'] : []));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,

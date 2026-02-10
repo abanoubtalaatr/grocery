@@ -82,10 +82,19 @@ class Address extends Model
     }
 
     /**
-     * Get formatted phone with country code.
+     * Get formatted phone. Avoids duplicating country code if phone already includes it.
      */
     public function getFormattedPhoneAttribute(): string
     {
-        return $this->country_code . $this->phone;
+        $phone = trim((string) $this->phone);
+        $code = trim((string) ($this->country_code ?? ''));
+        if ($phone === '') {
+            return $code;
+        }
+        // If phone already starts with + or with this country code, do not prepend again
+        if (str_starts_with($phone, '+') || ($code !== '' && str_starts_with($phone, $code))) {
+            return $phone;
+        }
+        return $code !== '' ? $code . $phone : $phone;
     }
 }

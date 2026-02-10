@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Meal;
+use App\Services\ShippingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,11 +23,20 @@ class CartController extends Controller
             $user = $request->user();
             $cart = $user->getOrCreateCart();
             $cart->load(['items.meal.category', 'items.meal.subcategory']);
+            $deliveryType = $request->query('delivery_type');
+            if ($deliveryType && in_array($deliveryType, ['delivery', 'pickup'], true)) {
+                $shippingService = app(ShippingService::class);
+                $shippingFee = $shippingService->calculateShippingFee((float) $cart->subtotal, $deliveryType);
+                $totalWithShipping = (float) $cart->total + $shippingFee;
+            } else {
+                $shippingFee = null;
+                $totalWithShipping = null;
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Cart retrieved successfully',
-                'data' => $this->formatCart($cart),
+                'data' => $this->formatCart($cart, $shippingFee, $totalWithShipping),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -43,9 +53,12 @@ class CartController extends Controller
     public function addItem(Request $request): JsonResponse
     {
         try {
+            $maxPerProduct = config('cart.max_quantity_per_product', 10);
             $validated = $request->validate([
                 'meal_id' => ['required', 'exists:meals,id'],
-                'quantity' => ['required', 'integer', 'min:1', 'max:100'],
+                'quantity' => ['required', 'integer', 'min:1', 'max:' . $maxPerProduct],
+            ], [
+                'quantity.max' => "Maximum {$maxPerProduct} units per product allowed.",
             ]);
 
             $user = $request->user();
@@ -90,9 +103,16 @@ class CartController extends Controller
             $cartItem = $cart->items()->where('meal_id', $meal->id)->first();
 
             if ($cartItem) {
-                // Update quantity
+                // Update quantity (enforce max per product per user)
                 $newQuantity = $cartItem->quantity + $validated['quantity'];
-                
+                $effectiveMax = min($maxPerProduct, $meal->stock_quantity);
+                if ($newQuantity > $effectiveMax) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Maximum {$maxPerProduct} units per product. You already have {$cartItem->quantity} in cart; maximum total is {$effectiveMax}.",
+                    ], 400);
+                }
                 if ($meal->stock_quantity < $newQuantity) {
                     return response()->json([
                         'success' => false,
@@ -151,8 +171,11 @@ class CartController extends Controller
     public function updateItem(Request $request, string $itemId): JsonResponse
     {
         try {
+            $maxPerProduct = config('cart.max_quantity_per_product', 10);
             $validated = $request->validate([
-                'quantity' => ['required', 'integer', 'min:1', 'max:100'],
+                'quantity' => ['required', 'integer', 'min:1', 'max:' . $maxPerProduct],
+            ], [
+                'quantity.max' => "Maximum {$maxPerProduct} units per product allowed.",
             ]);
 
             $user = $request->user();
@@ -278,11 +301,12 @@ class CartController extends Controller
     }
 
     /**
-     * Format cart data for response
+     * Format cart data for response.
+     * When shipping fee and total_with_shipping are provided (e.g. from delivery_type query), they are included.
      */
-    private function formatCart(Cart $cart): array
+    private function formatCart(Cart $cart, ?float $shippingFee = null, ?float $totalWithShipping = null): array
     {
-        return [
+        $data = [
             'id' => $cart->id,
             'status' => $cart->isEmpty() ? 'empty' : 'not empty',
             'items' => $cart->items->map(function ($item) {
@@ -324,5 +348,12 @@ class CartController extends Controller
             'created_at' => $cart->created_at,
             'updated_at' => $cart->updated_at,
         ];
+
+        if ($shippingFee !== null && $totalWithShipping !== null) {
+            $data['shipping_fee'] = (float) $shippingFee;
+            $data['total_with_shipping'] = (float) $totalWithShipping;
+        }
+
+        return $data;
     }
 }

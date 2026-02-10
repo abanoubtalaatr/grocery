@@ -50,10 +50,11 @@ class Cart extends Model
     {
         $this->load('items');
         
+        // Item subtotals = unit_price * quantity (amount to pay per line); discount is for display only
         $subtotal = $this->items->sum('subtotal');
         $tax = $subtotal * 0.1; // 10% tax rate - adjust as needed
         $discount = $this->items->sum('discount_amount');
-        $total = $subtotal + $tax - $discount;
+        $total = $subtotal + $tax;
 
         $this->update([
             'subtotal' => $subtotal,

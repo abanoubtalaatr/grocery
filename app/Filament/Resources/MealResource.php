@@ -133,6 +133,10 @@ class MealResource extends Resource
                     ->label('Available for sale')
                     ->helperText('When off, this product is hidden from the catalog.')
                     ->default(true),
+                Forms\Components\Toggle::make('is_hot')
+                    ->label('Hot / Ready-to-eat')
+                    ->helperText('When on, this meal appears in the Hot Meals API.')
+                    ->default(false),
                 Forms\Components\DatePicker::make('available_date')
                     ->rules(['nullable', 'date']),
             ]);
@@ -200,6 +204,9 @@ class MealResource extends Resource
                 Tables\Columns\IconColumn::make('is_available')
                     ->boolean()
                     ->label('Available'),
+                Tables\Columns\IconColumn::make('is_hot')
+                    ->boolean()
+                    ->label('Hot'),
                 Tables\Columns\TextColumn::make('available_date')
                     ->date()
                     ->sortable(),

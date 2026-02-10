@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
+use App\Services\ShippingService;
 
 class OrderController extends Controller
 {
@@ -57,15 +58,18 @@ class OrderController extends Controller
 
             $items = $itemsResult['items'];
 
-            // Calculate totals (use cart totals to match what user sees)
+            // Calculate totals and shipping (use cart totals; add shipping for delivery)
             $cart->calculateTotals();
+            $shippingService = app(ShippingService::class);
+            $shippingFee = $shippingService->calculateShippingFee((float) $cart->subtotal, $validated['delivery_type']);
             $totals = [
                 'subtotal' => $cart->subtotal,
                 'tax' => $cart->tax,
                 'discount' => $cart->discount,
-                'total' => $cart->total,
+                'shipping_fee' => $shippingFee,
+                'total' => (float) $cart->subtotal + (float) $cart->tax + $shippingFee,
             ];
-            $total = $cart->total;
+            $total = $totals['total'];
 
             // Validate amount matches cart total
             // if (abs($total - $validated['amount']) > 0.01) {
@@ -167,6 +171,17 @@ class OrderController extends Controller
                     'response' => [
                         'success' => false,
                         'message' => "Only {$meal->stock_quantity} items available for '{$meal->title}'",
+                    ],
+                ];
+            }
+
+            $maxPerProduct = config('cart.max_quantity_per_product', 10);
+            if ($cartItem->quantity > $maxPerProduct) {
+                return [
+                    'success' => false,
+                    'response' => [
+                        'success' => false,
+                        'message' => "Maximum {$maxPerProduct} units per product allowed. Please reduce quantity for '{$meal->title}'.",
                     ],
                 ];
             }
@@ -275,6 +290,7 @@ class OrderController extends Controller
             'subtotal' => $subtotal,
             'tax' => $totals['tax'],
             'discount' => $totals['discount'],
+            'shipping_fee' => $totals['shipping_fee'],
             'total' => $totals['total'],
             'notes' => $validated['notes'] ?? null,
             'placed_at' => now(),
@@ -486,6 +502,7 @@ class OrderController extends Controller
             'subtotal' => $order->subtotal,
             'tax' => $order->tax,
             'discount' => $order->discount,
+            'shipping_fee' => (float) ($order->shipping_fee ?? 0),
             'total' => $order->total,
             'notes' => $order->notes,
             'created_at' => $order->created_at,

@@ -63,6 +63,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/image', [ProfileController::class, 'updateImage']);
         Route::put('/info', [ProfileController::class, 'updateInfo']);
         Route::delete('/image', [ProfileController::class, 'deleteImage']);
+        Route::get('/sessions', [ProfileController::class, 'sessions']);
+        Route::delete('/sessions/{tokenId}', [ProfileController::class, 'destroySession']);
     });
 
     // Address routes
@@ -75,7 +77,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/set-default', [AddressController::class, 'setDefault']);
     });
 
-    Route::apiResource('smart-lists',SmartListController::class);
+    Route::post('smart-lists/{id}/meals', [SmartListController::class, 'addMeal']);
+    Route::delete('smart-lists/{id}/meals/{mealId}', [SmartListController::class, 'removeMeal']);
+    Route::apiResource('smart-lists', SmartListController::class);
 
     Route::prefix('notification-settings')->group(function () {
         Route::get('/', [NotificationSettingsController::class, 'index']);

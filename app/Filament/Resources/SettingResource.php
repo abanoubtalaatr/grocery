@@ -49,6 +49,20 @@ class SettingResource extends Resource
                     ->columnSpanFull(),
                 Forms\Components\TextInput::make('copyright_text')
                     ->maxLength(255),
+                Forms\Components\Section::make('Shipping')
+                    ->schema([
+                        Forms\Components\TextInput::make('shipping_fee')
+                            ->numeric()
+                            ->minValue(0)
+                            ->default(0)
+                            ->helperText('Default shipping fee for delivery orders. Pickup is always 0.'),
+                        Forms\Components\TextInput::make('free_shipping_min_order')
+                            ->numeric()
+                            ->minValue(0)
+                            ->nullable()
+                            ->helperText('Order subtotal above which shipping is free. Leave empty to never offer free shipping.'),
+                    ])
+                    ->columns(2),
             ]);
     }
 
