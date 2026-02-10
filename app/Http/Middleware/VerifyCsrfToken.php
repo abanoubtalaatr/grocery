@@ -25,5 +25,6 @@ class VerifyCsrfToken extends Middleware
         'api/auth/google',
         // Public contact form
         'api/contact',
+        'api/*'
     ];
 }
