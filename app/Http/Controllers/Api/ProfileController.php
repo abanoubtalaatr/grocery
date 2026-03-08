@@ -276,7 +276,7 @@ class ProfileController extends Controller
     public function sessions(Request $request): JsonResponse
     {
         $user = $request->user();
-        $currentTokenId = $request->user()->currentAccessToken()?->id();
+        $currentTokenId = $request->user()->currentAccessToken()?->id;
 
         $tokens = $user->tokens()->get()->map(function ($token) use ($currentTokenId) {
             return [
@@ -301,7 +301,7 @@ class ProfileController extends Controller
     public function destroySession(Request $request, string $tokenId): JsonResponse
     {
         $user = $request->user();
-        $currentTokenId = $user->currentAccessToken()?->id();
+        $currentTokenId = $user->currentAccessToken()?->id;
 
         if ((string) $tokenId === (string) $currentTokenId) {
             return response()->json([
@@ -425,7 +425,7 @@ class ProfileController extends Controller
 
     private function formatSessions($user): array
     {
-        $currentTokenId = $user->currentAccessToken()?->id();
+        $currentTokenId = $user->currentAccessToken()?->id;
         return $user->tokens()->get()->map(function ($token) use ($currentTokenId) {
             return [
                 'id' => $token->id,
