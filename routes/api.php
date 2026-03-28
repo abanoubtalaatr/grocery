@@ -110,7 +110,58 @@ Route::middleware('auth:sanctum')->group(function () {
         // Filtered notifications
         Route::get('/type/{type}', [NotificationController::class, 'byType']);
     });
-    // Meals routes
+    
+
+    // Cart routes
+    Route::prefix('cart')->group(function () {
+        Route::get('/', [CartController::class, 'index']);
+        Route::post('/items', [CartController::class, 'addItem']);
+        Route::put('/items/{itemId}', [CartController::class, 'updateItem']);
+        Route::delete('/items/{itemId}', [CartController::class, 'removeItem']);
+        Route::delete('/clear', [CartController::class, 'clear']);
+    });
+
+    // Favorites routes
+    Route::prefix('favorites')->group(function () {
+        Route::get('/', [FavoriteController::class, 'index']);
+        Route::post('/{mealId}/toggle', [FavoriteController::class, 'toggle']);
+        Route::get('/{mealId}/check', [FavoriteController::class, 'check']);
+        Route::delete('/{mealId}', [FavoriteController::class, 'remove']);
+    });
+
+    // Chatbot routes
+    Route::prefix('chatbot')->group(function () {
+        Route::post('/', [ChatbotController::class, 'chat']);
+        Route::get('/history', [ChatbotController::class, 'history']);
+        Route::get('/suggestions', [ChatbotController::class, 'suggestions']);
+    });
+
+    
+    Route::get('/cards', [StripeController::class, 'listCards']);
+    Route::post('/setup-intent', [StripeController::class, 'createSetupIntent']);
+    Route::post('/charge-card', [StripeController::class, 'chargeSavedCard']);
+    Route::delete('/cards/{id}', [StripeController::class, 'deleteCard']);
+
+    // Order routes
+    Route::prefix('orders')->group(function () {
+        Route::post('/', [OrderController::class, 'store']);
+        Route::get('/', [OrderController::class, 'index']);
+        Route::get('/track', [OrderController::class, 'track']);
+        Route::get('/{id}', [OrderController::class, 'show']);
+    });
+
+    // Payment routes
+    Route::prefix('payments')->group(function () {
+        Route::get('/history', [PaymentController::class, 'paymentHistory']);
+        Route::get('/receipt/{order}', [PaymentController::class, 'receipt']);
+        Route::get('/invoice/{order}', [PaymentController::class, 'invoice']);
+    });
+
+    // Dashboard route
+    Route::get('/dashboard', [DashboardController::class, 'index']);
+});
+
+// Meals routes
     Route::prefix('meals')->group(function () {
         Route::get('/today', [MealController::class, 'today']);
         Route::get('hot',[MealController::class, 'hot']);
@@ -148,55 +199,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}', [SubcategoryController::class, 'show']);
         Route::get('/{id}/meals', [SubcategoryController::class, 'meals']);
     });
-
-    // Cart routes
-    Route::prefix('cart')->group(function () {
-        Route::get('/', [CartController::class, 'index']);
-        Route::post('/items', [CartController::class, 'addItem']);
-        Route::put('/items/{itemId}', [CartController::class, 'updateItem']);
-        Route::delete('/items/{itemId}', [CartController::class, 'removeItem']);
-        Route::delete('/clear', [CartController::class, 'clear']);
-    });
-
-    // Favorites routes
-    Route::prefix('favorites')->group(function () {
-        Route::get('/', [FavoriteController::class, 'index']);
-        Route::post('/{mealId}/toggle', [FavoriteController::class, 'toggle']);
-        Route::get('/{mealId}/check', [FavoriteController::class, 'check']);
-        Route::delete('/{mealId}', [FavoriteController::class, 'remove']);
-    });
-
-    // Chatbot routes
-    Route::prefix('chatbot')->group(function () {
-        Route::post('/', [ChatbotController::class, 'chat']);
-        Route::get('/history', [ChatbotController::class, 'history']);
-        Route::get('/suggestions', [ChatbotController::class, 'suggestions']);
-    });
-
-    Route::get('/cards', [StripeController::class, 'listCards']);
-    Route::post('/setup-intent', [StripeController::class, 'createSetupIntent']);
-    Route::post('/charge-card', [StripeController::class, 'chargeSavedCard']);
-    Route::delete('/cards/{id}', [StripeController::class, 'deleteCard']);
-
-    // Order routes
-    Route::prefix('orders')->group(function () {
-        Route::post('/', [OrderController::class, 'store']);
-        Route::get('/', [OrderController::class, 'index']);
-        Route::get('/track', [OrderController::class, 'track']);
-        Route::get('/{id}', [OrderController::class, 'show']);
-    });
-
-    // Payment routes
-    Route::prefix('payments')->group(function () {
-        Route::get('/history', [PaymentController::class, 'paymentHistory']);
-        Route::get('/receipt/{order}', [PaymentController::class, 'receipt']);
-        Route::get('/invoice/{order}', [PaymentController::class, 'invoice']);
-    });
-
-    // Dashboard route
-    Route::get('/dashboard', [DashboardController::class, 'index']);
-});
-
 Route::get('/faqs', [FaqController::class, 'index']);
 Route::get('/pages', [StaticPageController::class, 'index']);
 Route::get('/pages/slug/{slug}', [StaticPageController::class, 'showBySlug']);
