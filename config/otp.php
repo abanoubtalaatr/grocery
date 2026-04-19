@@ -27,4 +27,16 @@ return [
 
     'length' => env('OTP_LENGTH', 6),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Fixed OTP (development / testing only)
+    |--------------------------------------------------------------------------
+    |
+    | When set, every generated OTP is this value instead of a random code.
+    | Leave empty in production.
+    |
+    */
+
+    'fixed_code' => env('OTP_FIXED_CODE'),
+
 ];

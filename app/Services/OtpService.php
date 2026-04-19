@@ -12,6 +12,8 @@ class OtpService
      */
     public function generate(string $identifier, string $type): string
     {
+        $identifier = $this->normalizeIdentifier($identifier);
+
         // Invalidate any existing valid OTPs for this identifier and type
         Otp::where('identifier', $identifier)
             ->where('type', $type)
@@ -37,6 +39,8 @@ class OtpService
      */
     public function verify(string $identifier, string $otpCode, string $type): bool
     {
+        $identifier = $this->normalizeIdentifier($identifier);
+
         $otp = Otp::where('identifier', $identifier)
             ->where('otp', $otpCode)
             ->where('type', $type)
@@ -57,6 +61,8 @@ class OtpService
      */
     public function isValid(string $identifier, string $otpCode, string $type): bool
     {
+        $identifier = $this->normalizeIdentifier($identifier);
+
         return Otp::where('identifier', $identifier)
             ->where('otp', $otpCode)
             ->where('type', $type)
@@ -69,6 +75,11 @@ class OtpService
      */
     private function generateOtpCode(): string
     {
+        $fixed = config('otp.fixed_code');
+        if (is_string($fixed) && $fixed !== '') {
+            return $fixed;
+        }
+
         $length = max(4, min(8, (int) config('otp.length', 6)));
 
         $code = '';
@@ -77,6 +88,20 @@ class OtpService
         }
 
         return $code;
+    }
+
+    /**
+     * Normalize identifier so email/OTP lookups match across requests.
+     */
+    private function normalizeIdentifier(string $identifier): string
+    {
+        $identifier = trim($identifier);
+
+        if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+            return strtolower($identifier);
+        }
+
+        return $identifier;
     }
 
     /**

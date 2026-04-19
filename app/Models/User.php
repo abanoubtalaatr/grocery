@@ -151,6 +151,12 @@ class User extends Authenticatable implements HasName
      */
     public static function findByIdentifier(string $identifier): ?self
     {
+        $identifier = trim($identifier);
+
+        if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+            $identifier = strtolower($identifier);
+        }
+
         return static::where('email', $identifier)
             ->orWhere('phone', $identifier)
             ->first();
