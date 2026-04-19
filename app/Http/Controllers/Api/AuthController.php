@@ -116,21 +116,21 @@ class AuthController extends Controller
      */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        dd($request->all());
-        try {
-            $this->authService->forgotPassword($request->input('identifier'));
+        
+        // try {
+           dd($this->authService->forgotPassword($request->input('identifier')));
 
             return response()->json([
                 'success' => true,
                 'message' => 'OTP sent successfully. Please check your email or phone.',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to send OTP',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        //     ]);
+        // } catch (\Exception $e) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Failed to send OTP',
+        //         'error' => $e->getMessage(),
+        //     ], 500);
+        // }
     }
 
     /**
