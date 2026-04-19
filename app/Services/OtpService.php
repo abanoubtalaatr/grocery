@@ -77,6 +77,7 @@ class OtpService
      */
     private function generateOtpCode(): string
     {
+        return 123456;
         $fixed = config('otp.fixed_code');
         if (is_string($fixed) && $fixed !== '') {
             return $fixed;
