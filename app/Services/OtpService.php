@@ -60,17 +60,23 @@ class OtpService
         return Otp::where('identifier', $identifier)
             ->where('otp', $otpCode)
             ->where('type', $type)
-            
+            ->valid()
             ->exists();
     }
 
     /**
-     * Generate a random OTP code
+     * Generate a random numeric OTP of configured length.
      */
     private function generateOtpCode(): string
     {
-        $length = config('otp.length', 4);
-        return 1234;
+        $length = max(4, min(8, (int) config('otp.length', 6)));
+
+        $code = '';
+        for ($i = 0; $i < $length; $i++) {
+            $code .= (string) random_int(0, 9);
+        }
+
+        return $code;
     }
 
     /**
