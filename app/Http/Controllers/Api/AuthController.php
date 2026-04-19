@@ -118,12 +118,12 @@ class AuthController extends Controller
     {
         
         // try {
-           dd($this->authService->forgotPassword($request->input('identifier')));
+           dd($this->authService->forgotPassword($request->input('identifier')),'123');
 
             return response()->json([
                 'success' => true,
                 'message' => 'OTP sent successfully. Please check your email or phone.',
-        //     ]);
+            ]);
         // } catch (\Exception $e) {
         //     return response()->json([
         //         'success' => false,
