@@ -92,7 +92,9 @@ class AuthService
 
         if (!$user) {
             // Don't reveal if user exists or not for security
-            return false;
+            throw ValidationException::withMessages([
+                'identifier' => ['User not found.'],
+            ]);
         }
 
         // Generate OTP
