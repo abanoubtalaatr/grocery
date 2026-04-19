@@ -40,6 +40,7 @@ class OtpService
     public function verify(string $identifier, string $otpCode, string $type): bool
     {
         $identifier = $this->normalizeIdentifier($identifier);
+        $otpCode = $this->normalizeOtpInput($otpCode);
 
         $otp = Otp::where('identifier', $identifier)
             ->where('otp', $otpCode)
@@ -62,6 +63,7 @@ class OtpService
     public function isValid(string $identifier, string $otpCode, string $type): bool
     {
         $identifier = $this->normalizeIdentifier($identifier);
+        $otpCode = $this->normalizeOtpInput($otpCode);
 
         return Otp::where('identifier', $identifier)
             ->where('otp', $otpCode)
@@ -102,6 +104,14 @@ class OtpService
         }
 
         return $identifier;
+    }
+
+    /**
+     * Normalize OTP from JSON/form (handles numeric JSON, whitespace).
+     */
+    private function normalizeOtpInput(string|int $otpCode): string
+    {
+        return preg_replace('/\s+/', '', (string) $otpCode);
     }
 
     /**
