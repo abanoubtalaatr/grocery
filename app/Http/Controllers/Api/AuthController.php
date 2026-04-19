@@ -116,6 +116,7 @@ class AuthController extends Controller
      */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
+        dd($request->all());
         try {
             $this->authService->forgotPassword($request->input('identifier'));
 
