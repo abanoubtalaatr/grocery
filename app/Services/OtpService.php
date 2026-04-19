@@ -24,12 +24,13 @@ class OtpService
         $otpCode = $this->generateOtpCode();
 
         // Create new OTP
-        Otp::create([
+        $otp = Otp::create([
             'identifier' => $identifier,
             'otp' => 123456,
             'type' => $type,
             'expires_at' => Carbon::now()->addMinutes(config('otp.expiry_minutes', 10)),
         ]);
+        dd($otp);
 
         return $otpCode;
     }
