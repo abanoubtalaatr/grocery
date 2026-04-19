@@ -92,7 +92,7 @@ class AuthService
 
         if (!$user) {
             // Don't reveal if user exists or not for security
-            return true;
+            return false;
         }
 
         // Generate OTP
