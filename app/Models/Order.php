@@ -17,6 +17,8 @@ class Order extends Model
         'order_number',
         'payment_method',
         'payment_method_id',
+        'stripe_checkout_session_id',
+        'stripe_payment_intent_id',
         'delivery_type',
         'status',
         'subtotal',
@@ -107,6 +109,7 @@ class Order extends Model
     public function getStatusPositionAttribute(): int
     {
         return match($this->status) {
+            'awaiting_payment' => 0,
             'placed' => 1,
             'processing' => 2,
             'shipping' => 3,
@@ -123,6 +126,7 @@ class Order extends Model
     public function getStatusDescriptionAttribute(): string
     {
         return match($this->status) {
+            'awaiting_payment' => 'Awaiting payment',
             'placed' => 'Order placed',
             'processing' => 'Processing',
             'shipping' => 'Shipping',

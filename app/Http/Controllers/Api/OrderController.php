@@ -83,16 +83,21 @@ class OrderController extends Controller
 
             DB::beginTransaction();
 
-            // Process payment if card payment
-            $paymentResult = $this->processPayment($user, $validated, $total);
-            if (!$paymentResult['success']) {
+            $paymentResult = match ($validated['payment_method']) {
+                'stripe_checkout' => ['success' => true],
+                default => $this->processPayment($user, $validated, $total),
+            };
+
+            if (! $paymentResult['success']) {
                 DB::rollBack();
+
                 return response()->json($paymentResult['response'], 400);
             }
 
-            
+            $stripePaymentIntentId = $paymentResult['stripe_payment_intent_id'] ?? null;
+
             // Create order
-            $order = $this->createOrder($user, $validated, $totals['subtotal'], $totals);
+            $order = $this->createOrder($user, $validated, $totals['subtotal'], $totals, $stripePaymentIntentId);
 
             // Create order items and update stock
             $this->createOrderItems($order, $items);
@@ -263,7 +268,10 @@ class OrderController extends Controller
                 ];
             }
 
-            return ['success' => true];
+            return [
+                'success' => true,
+                'stripe_payment_intent_id' => $paymentIntent->id,
+            ];
         } catch (\Exception $e) {
             return [
                 'success' => false,
@@ -278,22 +286,25 @@ class OrderController extends Controller
     /**
      * Create order record.
      */
-    private function createOrder($user, array $validated, float $subtotal, array $totals): Order
+    private function createOrder($user, array $validated, float $subtotal, array $totals, ?string $stripePaymentIntentId = null): Order
     {
+        $isHostedStripe = $validated['payment_method'] === 'stripe_checkout';
+
         return Order::create([
             'user_id' => $user->id,
             'address_id' => $validated['delivery_type'] === 'delivery' ? $validated['address_id'] : null,
             'payment_method' => $validated['payment_method'],
-            'payment_method_id' => $validated['payment_method_id'] ?? null,
+            'payment_method_id' => null,
+            'stripe_payment_intent_id' => $stripePaymentIntentId,
             'delivery_type' => $validated['delivery_type'],
-            'status' => 'placed',
+            'status' => $isHostedStripe ? 'awaiting_payment' : 'placed',
             'subtotal' => $subtotal,
             'tax' => $totals['tax'],
             'discount' => $totals['discount'],
             'shipping_fee' => $totals['shipping_fee'],
             'total' => $totals['total'],
             'notes' => $validated['notes'] ?? null,
-            'placed_at' => now(),
+            'placed_at' => $isHostedStripe ? null : now(),
         ]);
     }
 
@@ -380,6 +391,18 @@ class OrderController extends Controller
                 ], 404);
             }
 
+            if ($order->status === 'awaiting_payment') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Order is waiting for payment. Complete checkout to continue.',
+                    'data' => [
+                        'order' => $this->formatOrder($order),
+                        'awaiting_payment' => true,
+                        'tracking' => null,
+                    ],
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Order tracking retrieved successfully',
@@ -452,6 +475,7 @@ class OrderController extends Controller
             'id' => $order->id,
             'order_number' => $order->order_number,
             'payment_method' => $order->payment_method,
+            'stripe_payment_intent_id' => $order->stripe_payment_intent_id,
             'delivery_type' => $order->delivery_type,
             'status' => $order->status,
             'status_position' => $order->status_position,

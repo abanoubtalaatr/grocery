@@ -25,7 +25,7 @@ class StoreOrderRequest extends FormRequest
         $userId = $this->user()->id;
 
         return [
-            'payment_method' => ['required', 'string', Rule::in(['card', 'cash_on_delivery'])],
+            'payment_method' => ['required', 'string', Rule::in(['card', 'cash_on_delivery', 'stripe_checkout'])],
             'payment_method_id' => ['nullable', 'string', 'required_if:payment_method,card'],
             'delivery_type' => ['required', 'string', Rule::in(['delivery', 'pickup'])],
             'address_id' => [

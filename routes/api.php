@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\MealController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\StripeController;
+use App\Http\Controllers\Api\StripeCheckoutController;
+use App\Http\Controllers\Api\StripeWebhookController;
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\ChatbotController;
 use App\Http\Controllers\Api\ContactController;
@@ -35,6 +37,8 @@ use App\Http\Controllers\Api\NotificationSettingsController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle']);
 
 // Public routes - Authentication
 Route::prefix('auth')->group(function () {
@@ -152,6 +156,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Payment routes
     Route::prefix('payments')->group(function () {
+        Route::post('/stripe/checkout-session', [StripeCheckoutController::class, 'store']);
         Route::get('/history', [PaymentController::class, 'paymentHistory']);
         Route::get('/receipt/{order}', [PaymentController::class, 'receipt']);
         Route::get('/invoice/{order}', [PaymentController::class, 'invoice']);

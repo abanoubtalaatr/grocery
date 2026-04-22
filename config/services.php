@@ -39,6 +39,16 @@ return [
     'stripe' => [
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'currency' => env('STRIPE_CURRENCY', 'usd'),
+        'checkout_success_url' => env(
+            'STRIPE_CHECKOUT_SUCCESS_URL',
+            rtrim((string) env('APP_URL', 'http://localhost'), '/').'/payment/success?session_id={CHECKOUT_SESSION_ID}'
+        ),
+        'checkout_cancel_url' => env(
+            'STRIPE_CHECKOUT_CANCEL_URL',
+            rtrim((string) env('APP_URL', 'http://localhost'), '/').'/payment/cancel?order_id={ORDER_ID}'
+        ),
     ],
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),

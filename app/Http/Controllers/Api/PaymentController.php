@@ -29,7 +29,7 @@ class PaymentController extends Controller
                     'id' => $order->id,
                     'order_number' => $order->order_number,
                     'payment_method' => $order->payment_method,
-                    'payment_method_id' => $order->payment_method_id,
+                    'stripe_payment_intent_id' => $order->stripe_payment_intent_id,
                     'amount' => (float) $order->total,
                     'subtotal' => (float) $order->subtotal,
                     'tax' => (float) $order->tax,
@@ -150,7 +150,7 @@ class PaymentController extends Controller
             // Payment Information
             'payment' => [
                 'method' => $order->payment_method,
-                'method_id' => $order->payment_method_id,
+                'stripe_payment_intent_id' => $order->stripe_payment_intent_id,
                 'method_display' => $this->getPaymentMethodDisplay($order->payment_method),
             ],
 
@@ -211,6 +211,7 @@ class PaymentController extends Controller
     {
         return match($method) {
             'card' => 'Credit/Debit Card',
+            'stripe_checkout' => 'Card (Stripe Checkout)',
             'cash_on_delivery' => 'Cash on Delivery',
             'cash' => 'Cash',
             'stripe' => 'Stripe',

@@ -52,6 +52,8 @@ class OrderResource extends Resource
                         'stripe' => 'Stripe',
                         'cash' => 'Cash',
                         'card' => 'Card',
+                        'cash_on_delivery' => 'Cash on delivery',
+                        'stripe_checkout' => 'Stripe Checkout (hosted)',
                     ])
                     ->required(),
                 Forms\Components\TextInput::make('payment_method_id')
@@ -66,6 +68,7 @@ class OrderResource extends Resource
                     ->required(),
                 Forms\Components\Select::make('status')
                     ->options([
+                        'awaiting_payment' => 'Awaiting payment',
                         'placed' => 'Order Placed',
                         'processing' => 'Processing',
                         'shipping' => 'Shipping',
@@ -190,6 +193,7 @@ class OrderResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
+                        'awaiting_payment' => 'Awaiting payment',
                         'placed' => 'Order Placed',
                         'processing' => 'Processing',
                         'shipping' => 'Shipping',
@@ -202,6 +206,8 @@ class OrderResource extends Resource
                         'stripe' => 'Stripe',
                         'cash' => 'Cash',
                         'card' => 'Card',
+                        'cash_on_delivery' => 'Cash on delivery',
+                        'stripe_checkout' => 'Stripe Checkout (hosted)',
                     ]),
             ])
             ->actions([
