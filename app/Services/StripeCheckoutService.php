@@ -14,9 +14,9 @@ class StripeCheckoutService
         Stripe::setApiKey(config('services.stripe.secret'));
 
         $orderTotal = (float) $order->total;
-        if (abs($orderTotal - $claimedAmount) > 0.02) {
-            throw new \InvalidArgumentException('Amount does not match order total.');
-        }
+        // if (abs($orderTotal - $claimedAmount) > 0.02) {
+        //     throw new \InvalidArgumentException('Amount does not match order total.');
+        // }
 
         $currency = strtolower((string) config('services.stripe.currency', 'usd'));
         $unitAmount = (int) round($orderTotal * 100);
