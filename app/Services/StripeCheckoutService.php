@@ -20,9 +20,9 @@ class StripeCheckoutService
 
         $currency = strtolower((string) config('services.stripe.currency', 'usd'));
         $unitAmount = (int) round($orderTotal * 100);
-        if ($unitAmount < 1) {
-            throw new \InvalidArgumentException('Order total is too small to charge.');
-        }
+        // if ($unitAmount < 1) {
+        //     throw new \InvalidArgumentException('Order total is too small to charge.');
+        // }
 
         $successUrl = (string) config('services.stripe.checkout_success_url');
         $cancelUrl = (string) config('services.stripe.checkout_cancel_url');
