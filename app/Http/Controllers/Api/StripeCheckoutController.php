@@ -27,19 +27,19 @@ class StripeCheckoutController extends Controller
             ], 404);
         }
 
-        if ($order->payment_method !== 'stripe_checkout') {
-            return response()->json([
-                'success' => false,
-                'message' => 'This order is not payable with hosted Stripe checkout.',
-            ], 422);
-        }
+        // if ($order->payment_method !== 'stripe_checkout') {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'This order is not payable with hosted Stripe checkout.',
+        //     ], 422);
+        // }
 
-        if ($order->status !== 'awaiting_payment') {
-            return response()->json([
-                'success' => false,
-                'message' => 'This order is not awaiting payment.',
-            ], 422);
-        }
+        // if ($order->status !== 'awaiting_payment') {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'This order is not awaiting payment.',
+        //     ], 422);
+        // }
 
         try {
             $session = $this->checkoutService->createSessionForOrder($order, $user, (float) $data['amount']);
