@@ -2,18 +2,21 @@
 
 namespace App\Models;
 
-use Filament\Models\Contracts\HasName;
-use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Notifications\Notifiable;
 use App\Traits\HasNotificationPreferences;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Filament\Models\Contracts\HasName;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable implements HasName
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
     use HasNotificationPreferences;
+
+    /** Maximum length for API-validated usernames (registration and profile). */
+    public const USERNAME_MAX_LENGTH = 50;
 
     /**
      * The attributes that are mass assignable.
@@ -123,8 +126,9 @@ class User extends Authenticatable implements HasName
     public function getFullNameAttribute(): ?string
     {
         if ($this->firstname && $this->lastname) {
-            return trim($this->firstname . ' ' . $this->lastname);
+            return trim($this->firstname.' '.$this->lastname);
         }
+
         return $this->firstname ?? $this->lastname ?? null;
     }
 
@@ -155,6 +159,8 @@ class User extends Authenticatable implements HasName
 
         if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
             $identifier = strtolower($identifier);
+        } else {
+            $identifier = preg_replace('/\s+/', '', $identifier);
         }
 
         return static::where('email', $identifier)
@@ -200,8 +206,8 @@ class User extends Authenticatable implements HasName
     public function getOrCreateCart(): Cart
     {
         $cart = $this->activeCart()->first();
-        
-        if (!$cart) {
+
+        if (! $cart) {
             $cart = $this->carts()->create([
                 'status' => 'active',
                 'subtotal' => 0,
@@ -210,7 +216,7 @@ class User extends Authenticatable implements HasName
                 'total' => 0,
             ]);
         }
-        
+
         return $cart;
     }
 
@@ -267,7 +273,7 @@ class User extends Authenticatable implements HasName
      */
     public function getProfileImageUrlAttribute(): ?string
     {
-        if (!$this->profile_image) {
+        if (! $this->profile_image) {
             return null;
         }
 
@@ -277,7 +283,7 @@ class User extends Authenticatable implements HasName
         }
 
         // Otherwise, generate URL from storage
-        return asset('storage/' . $this->profile_image);
+        return asset('storage/'.$this->profile_image);
     }
 
     public function notificationSettings()

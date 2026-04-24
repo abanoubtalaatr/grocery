@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ChatbotController extends Controller
 {
@@ -20,28 +21,66 @@ class ChatbotController extends Controller
     public function chat(Request $request): JsonResponse
     {
         try {
+            foreach (['question', 'message'] as $key) {
+                if ($request->hasFile($key)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Send the question as plain text (form field or JSON), not as a file upload.',
+                        'errors' => ['question' => ['The question must be a text value, not a file.']],
+                    ], 422);
+                }
+            }
+
+            if ($request->filled('message') && ! $request->filled('question')) {
+                $request->merge(['question' => $request->input('message')]);
+            }
+
+            $rawQuestion = $request->input('question');
+            if (is_array($rawQuestion)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Send a single question text only.',
+                    'errors' => ['question' => ['Multiple question values are not allowed.']],
+                ], 422);
+            }
+
             $validator = $request->validate([
                 'question' => ['required', 'string', 'max:1000'],
                 'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
                 'locale' => ['nullable', 'string', 'in:ar,en'],
             ]);
 
-            $question = $validator['question'];
+            $question = trim((string) $validator['question']);
+            if ($question === '') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => ['question' => ['A non-empty question is required.']],
+                ], 422);
+            }
             $rating = $validator['rating'] ?? null;
             $locale = $validator['locale'] ?? null;
             $apiKey = env('GEMINI_API_KEY');
 
-            if (!$apiKey) {
+            if (! $apiKey) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Gemini API key is not configured',
-                ], 500);
+                ], 503);
             }
 
             $user = $request->user();
+            if ($user === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required',
+                ], 401);
+            }
 
             $meals = Meal::with(['category', 'subcategory'])
                 ->available()
+                ->orderByDesc('sold_count')
+                ->limit(250)
                 ->get()
                 ->map(function ($meal) {
                     return [
@@ -53,8 +92,8 @@ class ChatbotController extends Controller
                         'rating_count' => (int) $meal->rating_count,
                         'size' => $meal->size,
                         'brand' => $meal->brand,
-                        'category' => $meal->category->name ?? null,
-                        'subcategory' => $meal->subcategory->name ?? null,
+                        'category' => $meal->category?->name,
+                        'subcategory' => $meal->subcategory?->name,
                         'is_featured' => $meal->is_featured,
                         'stock_quantity' => $meal->stock_quantity,
                         'in_stock' => $meal->isInStock(),
@@ -74,15 +113,16 @@ class ChatbotController extends Controller
 
             $localeHint = $this->getLocaleHint($locale);
 
-            $prompt = "You are a helpful assistant for a grocery/meal delivery app. " . $localeHint . "\n\n";
+            $prompt = 'You are a helpful assistant for a grocery/meal delivery app. '.$localeHint."\n\n";
 
-            $prompt .= "## Available meals (menu)\n" . json_encode($meals, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+            $jsonFlags = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE;
+            $prompt .= "## Available meals (menu)\n".json_encode($meals, $jsonFlags)."\n\n";
 
-            if (!empty($faqs)) {
-                $prompt .= "## FAQ (use these to answer general questions)\n" . json_encode($faqs, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+            if (! empty($faqs)) {
+                $prompt .= "## FAQ (use these to answer general questions)\n".json_encode($faqs, $jsonFlags)."\n\n";
             }
-            if (!empty($offers)) {
-                $prompt .= "## Active offers / promo codes\n" . json_encode($offers, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+            if (! empty($offers)) {
+                $prompt .= "## Active offers / promo codes\n".json_encode($offers, $jsonFlags)."\n\n";
             }
 
             $prompt .= "## Guidelines\n";
@@ -90,18 +130,18 @@ class ChatbotController extends Controller
             $prompt .= "- For payment: we support card and cash on delivery; guide them to checkout or payment settings.\n";
             $prompt .= "- For products, favorites, smart lists: use the meals data above; you can suggest categories or featured items.\n";
             $prompt .= "- For coupons: use the active offers list; mention code and conditions if relevant.\n";
-            $prompt .= "User question: " . $question . "\n\n";
-            $prompt .= "Provide a helpful, concise answer. If the question is off-topic, politely redirect to app features (orders, meals, offers, FAQ).";
+            $prompt .= 'User question: '.$question."\n\n";
+            $prompt .= 'Provide a helpful, concise answer. If the question is off-topic, politely redirect to app features (orders, meals, offers, FAQ).';
 
             $response = Http::timeout(30)->post(
-                'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent?key=' . $apiKey,
+                'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent?key='.$apiKey,
                 [
                     'contents' => [
                         [
                             'parts' => [
-                                ['text' => $prompt]
-                            ]
-                        ]
+                                ['text' => $prompt],
+                            ],
+                        ],
                     ],
                     'generationConfig' => [
                         'temperature' => 0.7,
@@ -112,26 +152,30 @@ class ChatbotController extends Controller
                 ]
             );
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::error('Gemini API Error', [
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Failed to get response from AI',
                     'error' => $response->status() === 401 ? 'Invalid API key' : 'API request failed',
-                ], 500);
+                ], 502);
             }
 
-            $responseData = $response->json();
-            $aiResponse = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? null;
+            $responseData = $response->json() ?? [];
+            $aiResponse = $this->extractGeminiText($responseData);
 
-            if (!$aiResponse) {
+            if ($aiResponse === null || $aiResponse === '') {
+                Log::warning('Gemini returned no text candidate', ['body' => $response->body()]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'No response from AI',
-                ], 500);
+                    'error' => $responseData['promptFeedback']['blockReason'] ?? 'empty_or_blocked',
+                ], 502);
             }
 
             $answer = trim($aiResponse);
@@ -159,17 +203,46 @@ class ChatbotController extends Controller
                 'message' => 'Validation failed',
                 'errors' => $e->errors(),
             ], 422);
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             Log::error('Chatbot Error', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to process chat request',
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $responseData
+     */
+    private function extractGeminiText(array $responseData): ?string
+    {
+        $candidates = $responseData['candidates'] ?? [];
+        if (! is_array($candidates)) {
+            return null;
+        }
+
+        foreach ($candidates as $candidate) {
+            if (! is_array($candidate)) {
+                continue;
+            }
+            $parts = $candidate['content']['parts'] ?? null;
+            if (! is_array($parts)) {
+                continue;
+            }
+            foreach ($parts as $part) {
+                if (is_array($part) && isset($part['text']) && is_string($part['text']) && $part['text'] !== '') {
+                    return $part['text'];
+                }
+            }
+        }
+
+        return null;
     }
 
     private function getLocaleHint(?string $locale): string
@@ -180,6 +253,7 @@ class ChatbotController extends Controller
         if ($locale === 'en') {
             return 'Respond in English.';
         }
+
         return 'Respond in the same language the user used.';
     }
 
@@ -222,6 +296,7 @@ class ChatbotController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Chatbot history error', ['message' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve chat history',

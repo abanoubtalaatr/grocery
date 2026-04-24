@@ -2,22 +2,33 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
 class LoginRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('login') || ! is_string($this->input('login'))) {
+            return;
+        }
+
+        $login = trim($this->input('login'));
+        if ($login !== '' && ! filter_var($login, FILTER_VALIDATE_EMAIL)) {
+            $login = preg_replace('/\s+/', '', $login);
+        }
+
+        $this->merge(['login' => $login]);
+    }
+
     /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, mixed>
      */
     public function rules(): array
     {
@@ -25,24 +36,39 @@ class LoginRequest extends FormRequest
             'login' => [
                 'required',
                 'string',
-                // Custom validation: Check active user by email or phone, not soft deleted
-                function ($attribute, $value, $fail) {
-                    $user = \App\Models\User::where('email', $value)
-                        ->orWhere('phone', $value)
-                        ->first();
-
-                    if (!$user || $user->deleted_at !== null) {
-                        $fail(__('auth.failed')); // Returns "These credentials do not match our records."
+                function (string $_attribute, mixed $value, Closure $fail): void {
+                    if (! is_string($value) || $value === '') {
+                        return;
                     }
-                }
+
+                    $login = trim($value);
+
+                    if (filter_var($login, FILTER_VALIDATE_EMAIL)) {
+                        $email = strtolower($login);
+                        $user = User::withTrashed()->where('email', $email)->first();
+                        if ($user === null) {
+                            $fail('Email is not registered.');
+                        } elseif ($user->trashed()) {
+                            $fail('This account has been deleted.');
+                        }
+
+                        return;
+                    }
+
+                    $phone = preg_replace('/\s+/', '', $login);
+                    $user = User::withTrashed()->where('phone', $phone)->first();
+                    if ($user === null) {
+                        $fail('Phone number is not registered.');
+                    } elseif ($user->trashed()) {
+                        $fail('This account has been deleted.');
+                    }
+                },
             ],
             'password' => ['required', 'string'],
         ];
     }
 
     /**
-     * Get custom messages for validator errors.
-     *
      * @return array<string, string>
      */
     public function messages(): array

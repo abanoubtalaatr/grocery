@@ -15,6 +15,43 @@ class VerifyOtpRequest extends FormRequest
     }
 
     /**
+     * Accept common multipart / mobile field names and trim whitespace from OTP input.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->mergeFirstFilledAlias('identifier', ['Identifier', 'email', 'Email', 'phone', 'Phone']);
+        $this->mergeFirstFilledAlias('otp', ['OTP', 'otp_code', 'Otp', 'code', 'Code']);
+
+        $merge = [];
+        if ($this->has('identifier') && is_string($this->input('identifier'))) {
+            $merge['identifier'] = trim($this->input('identifier'));
+        }
+        if ($this->has('otp')) {
+            $merge['otp'] = preg_replace('/\D/', '', (string) $this->input('otp'));
+        }
+        if ($merge !== []) {
+            $this->merge($merge);
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $aliases
+     */
+    private function mergeFirstFilledAlias(string $canonical, array $aliases): void
+    {
+        if ($this->filled($canonical)) {
+            return;
+        }
+        foreach ($aliases as $key) {
+            if ($this->filled($key)) {
+                $this->merge([$canonical => $this->input($key)]);
+
+                return;
+            }
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>

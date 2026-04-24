@@ -11,7 +11,9 @@ use Illuminate\Support\Collection;
 class FrequencyService
 {
     public const FREQUENCY_DAILY = 'daily';
+
     public const FREQUENCY_WEEKLY = 'weekly';
+
     public const FREQUENCY_MONTHLY = 'monthly';
 
     public const VALID_TYPES = [
@@ -58,9 +60,10 @@ class FrequencyService
      * Get frequently ordered meals for the user in the given time window.
      * Returns a collection of Meal models in frequency order, with order_count set on each.
      *
+     * @param  ?int  $subcategoryId  When set, only meals in this subcategory are returned (e.g. subcategory screen).
      * @return Collection<int, Meal>
      */
-    public function getFrequentlyOrderedMeals(User $user, string $frequencyType, int $limit = 50): Collection
+    public function getFrequentlyOrderedMeals(User $user, string $frequencyType, int $limit = 50, ?int $subcategoryId = null): Collection
     {
         $counts = $this->getFrequentlyOrderedMealCounts($user, $frequencyType);
 
@@ -69,9 +72,10 @@ class FrequencyService
         }
 
         $mealIds = array_keys($counts);
-        $meals = Meal::with('category')
+        $meals = Meal::with(['category', 'subcategory'])
             ->available()
             ->whereIn('id', $mealIds)
+            ->when($subcategoryId !== null && $subcategoryId > 0, fn ($q) => $q->where('subcategory_id', $subcategoryId))
             ->get()
             ->keyBy('id');
 

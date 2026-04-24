@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class AuthService
@@ -19,7 +18,7 @@ class AuthService
      */
     public function register(array $data): array
     {
-        
+
         // Create user
         $user = User::create([
             'username' => $data['username'],
@@ -48,16 +47,21 @@ class AuthService
      */
     public function login(string $identifier, string $password): array
     {
-        // Find user by email or phone
         $user = User::findByIdentifier($identifier);
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (! $user) {
             throw ValidationException::withMessages([
-                'login' => ['The provided credentials are incorrect.'],
+                'login' => ['Unable to sign in. Please try again.'],
             ]);
         }
 
-        if (!$user->is_active) {
+        if (! Hash::check($password, $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['The password you entered is incorrect.'],
+            ]);
+        }
+
+        if (! $user->is_active) {
             throw ValidationException::withMessages([
                 'login' => ['Your account has been deactivated.'],
             ]);
@@ -91,7 +95,7 @@ class AuthService
         // Find user
         $user = User::findByIdentifier($identifier);
 
-        if (!$user) {
+        if (! $user) {
             // Don't reveal if user exists or not for security
             throw ValidationException::withMessages([
                 'identifier' => ['User not found.'],
@@ -134,7 +138,7 @@ class AuthService
         // Find user
         $user = User::findByIdentifier($identifier);
 
-        if (!$user) {
+        if (! $user) {
             throw ValidationException::withMessages([
                 'identifier' => ['User not found.'],
             ]);

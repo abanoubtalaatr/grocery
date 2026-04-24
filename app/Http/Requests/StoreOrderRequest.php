@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\EmailValidation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -44,7 +45,7 @@ class StoreOrderRequest extends FormRequest
             'estimated_delivery_time' => ['nullable', 'integer', 'min:0'],
             'contacts_information.first_name' => ['nullable', 'string', 'max:255'],
             'contacts_information.last_name' => ['nullable', 'string', 'max:255'],
-            'contacts_information.email' => ['nullable', 'email', 'max:255'],
+            'contacts_information.email' => ['nullable', ...EmailValidation::formatRules(), 'max:255'],
             'contacts_information.phone' => ['nullable', 'string', 'max:20'],
         ];
     }
@@ -57,6 +58,9 @@ class StoreOrderRequest extends FormRequest
         return [
             'payment_method_id.required_if' => 'Payment method ID is required when using card payment.',
             'address_id.required_if' => 'Address is required for delivery orders.',
+            'contacts_information.email.not_regex' => EmailValidation::trailingHyphenDotBeforeAtMessage(),
+            'contacts_information.email.regex' => EmailValidation::domainStructureMessage(),
+            'contacts_information.email.max' => 'The email address may not exceed 255 characters.',
         ];
     }
 }

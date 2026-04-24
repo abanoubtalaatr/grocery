@@ -3,15 +3,13 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
-use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
+use App\Rules\UsernameMustContainLetter;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class UserResource extends Resource
 {
@@ -29,7 +27,8 @@ class UserResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('username')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(User::USERNAME_MAX_LENGTH)
+                    ->rules([new UsernameMustContainLetter]),
                 Forms\Components\FileUpload::make('profile_image')
                     ->image(),
                 Forms\Components\TextInput::make('email')

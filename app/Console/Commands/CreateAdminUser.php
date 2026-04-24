@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Rules\UsernameMustContainLetter;
+use App\Support\EmailValidation;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -41,16 +43,17 @@ class CreateAdminUser extends Command
             'email' => $email,
             'password' => $password,
         ], [
-            'username' => 'required|string|max:255|unique:users,username',
-            'email' => 'required|email|max:255|unique:users,email',
+            'username' => ['required', 'string', 'max:'.User::USERNAME_MAX_LENGTH, 'unique:users,username', new UsernameMustContainLetter],
+            'email' => ['required', ...EmailValidation::formatRules(), 'max:255', 'unique:users,email'],
             'password' => 'required|string|min:8',
         ]);
 
         if ($validator->fails()) {
             $this->error('Validation failed:');
             foreach ($validator->errors()->all() as $error) {
-                $this->error('  - ' . $error);
+                $this->error('  - '.$error);
             }
+
             return 1;
         }
 
@@ -68,7 +71,7 @@ class CreateAdminUser extends Command
             'country_code' => '+20',
         ]);
 
-        $this->info("✅ Admin user created successfully!");
+        $this->info('✅ Admin user created successfully!');
         $this->table(
             ['Field', 'Value'],
             [

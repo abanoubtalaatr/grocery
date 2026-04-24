@@ -5,15 +5,20 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Address;
 use App\Models\Order;
+use App\Models\User;
+use App\Rules\UsernameMustContainLetter;
+use App\Support\EgyptianPhoneRules;
+use App\Support\EmailValidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
+    private const PROFILE_SINGLE_IMAGE_MESSAGE = 'Only one profile image is allowed';
+
     /**
      * Get full user profile: picture, name, gender, birthday, addresses,
      * order history, in-progress orders with tracking, order notifications,
@@ -109,6 +114,23 @@ class ProfileController extends Controller
     public function updateImage(Request $request): JsonResponse
     {
         try {
+            if (count($request->allFiles()) > 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => self::PROFILE_SINGLE_IMAGE_MESSAGE,
+                    'errors' => ['image' => [self::PROFILE_SINGLE_IMAGE_MESSAGE]],
+                ], 422);
+            }
+
+            $uploaded = $request->file('image');
+            if (is_array($uploaded)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => self::PROFILE_SINGLE_IMAGE_MESSAGE,
+                    'errors' => ['image' => [self::PROFILE_SINGLE_IMAGE_MESSAGE]],
+                ], 422);
+            }
+
             $validator = Validator::make($request->all(), [
                 'image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'], // 2MB max
             ]);
@@ -160,17 +182,32 @@ class ProfileController extends Controller
         try {
             $user = $request->user();
 
+            if ($request->has('phone') && is_string($request->input('phone'))) {
+                $request->merge(['phone' => preg_replace('/\s+/', '', $request->input('phone'))]);
+            }
+
             $validator = Validator::make($request->all(), [
-                'username' => ['sometimes', 'string', 'max:255', Rule::unique('users')->ignore($user->id), 'alpha_dash'],
+                'username' => ['sometimes', 'string', 'max:'.User::USERNAME_MAX_LENGTH, Rule::unique('users')->ignore($user->id), 'not_regex:/\s/u', 'alpha_dash', new UsernameMustContainLetter],
                 'firstname' => ['sometimes', 'string', 'max:255'],
                 'lastname' => ['sometimes', 'string', 'max:255'],
                 'gender' => ['sometimes', 'nullable', 'string', 'max:20', Rule::in(['male', 'female', 'other', 'prefer_not_to_say'])],
                 'birthday' => ['sometimes', 'nullable', 'date', 'before:today'],
-                'email' => ['sometimes', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-                'phone' => ['sometimes', 'string', 'max:20', Rule::unique('users')->ignore($user->id), 'regex:/^\+?[1-9]\d{1,14}$/'],
+                'email' => ['sometimes', ...EmailValidation::formatRules(), 'max:255', Rule::unique('users')->ignore($user->id)],
+                'phone' => ['sometimes', 'string', EgyptianPhoneRules::internationalPrefixRule(), 'min:11', 'max:13', EgyptianPhoneRules::mobileRule(), Rule::unique('users')->ignore($user->id)],
                 'country_code' => ['sometimes', 'string', 'max:5', 'regex:/^\+\d{1,4}$/'],
                 'preferred_languages' => ['sometimes', 'array'],
                 'preferred_languages.*' => ['string', 'max:10'],
+            ], [
+                'username.max' => 'Maximum '.User::USERNAME_MAX_LENGTH.' characters allowed.',
+                'username.not_regex' => 'Username must not contain spaces.',
+                'username.alpha_dash' => 'Username may only contain letters, numbers, dashes and underscores.',
+                'email.not_regex' => EmailValidation::trailingHyphenDotBeforeAtMessage(),
+                'email.regex' => EmailValidation::domainStructureMessage(),
+                'email.max' => 'The email address may not exceed 255 characters.',
+                'phone.not_regex' => EgyptianPhoneRules::foreignPrefixMessage(),
+                'phone.regex' => EgyptianPhoneRules::invalidMessage(),
+                'phone.min' => EgyptianPhoneRules::lengthMessage(),
+                'phone.max' => EgyptianPhoneRules::lengthMessage(),
             ]);
 
             if ($validator->fails()) {
@@ -183,17 +220,18 @@ class ProfileController extends Controller
 
             // Update only provided fields
             $data = $request->only(['username', 'firstname', 'lastname', 'gender', 'birthday', 'email', 'phone', 'country_code', 'preferred_languages']);
-            
+
             // Handle preferred_languages separately (can be empty array)
             if ($request->has('preferred_languages')) {
                 $data['preferred_languages'] = $request->preferred_languages ?? [];
             }
-            
+
             // Remove empty values (except preferred_languages which can be empty array)
             $data = array_filter($data, function ($value, $key) {
                 if ($key === 'preferred_languages') {
                     return true; // Always include preferred_languages even if empty
                 }
+
                 return $value !== null && $value !== '';
             }, ARRAY_FILTER_USE_BOTH);
 
@@ -242,7 +280,7 @@ class ProfileController extends Controller
         try {
             $user = $request->user();
 
-            if (!$user->profile_image) {
+            if (! $user->profile_image) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No profile image to delete',
@@ -411,6 +449,7 @@ class ProfileController extends Controller
     private function formatNotification($notification): array
     {
         $data = $notification->data ?? [];
+
         return [
             'id' => $notification->id,
             'type' => $data['type'] ?? 'order',
@@ -426,6 +465,7 @@ class ProfileController extends Controller
     private function formatSessions($user): array
     {
         $currentTokenId = $user->currentAccessToken()?->id;
+
         return $user->tokens()->get()->map(function ($token) use ($currentTokenId) {
             return [
                 'id' => $token->id,
@@ -439,6 +479,7 @@ class ProfileController extends Controller
     private function formatWishlistItem($favorite): array
     {
         $meal = $favorite->meal;
+
         return [
             'id' => $meal->id,
             'title' => $meal->title,

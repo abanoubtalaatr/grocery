@@ -16,9 +16,17 @@ class AddressController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        if ($request->allFiles() !== []) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This endpoint does not accept file uploads.',
+                'errors' => ['files' => ['Remove file attachments from the request.']],
+            ], 422);
+        }
+
         try {
             $user = $request->user();
-            
+
             $addresses = $user->addresses()
                 ->orderBy('is_default', 'desc')
                 ->orderBy('created_at', 'desc')
@@ -137,6 +145,7 @@ class AddressController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create address',
@@ -205,6 +214,7 @@ class AddressController extends Controller
             ], 404);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update address',
@@ -248,6 +258,7 @@ class AddressController extends Controller
             ], 404);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete address',
@@ -265,8 +276,18 @@ class AddressController extends Controller
             $user = $request->user();
             $address = $user->addresses()->findOrFail($id);
 
+            if ($address->is_default) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'This address is already your default.',
+                    'already_default' => true,
+                    'data' => $this->formatAddress($address),
+                ]);
+            }
+
             DB::beginTransaction();
 
+            $user->addresses()->where('id', '!=', $address->id)->update(['is_default' => false]);
             $address->update(['is_default' => true]);
 
             DB::commit();
@@ -283,6 +304,7 @@ class AddressController extends Controller
             ], 404);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to set default address',

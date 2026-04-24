@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\RegisterRequest;
-use App\Http\Requests\LoginRequest;
-use App\Http\Requests\ForgotPasswordRequest;
-use App\Http\Requests\VerifyOtpRequest;
-use App\Http\Requests\ResetPasswordRequest;
 use App\Http\Requests\ChangePasswordRequest;
+use App\Http\Requests\DeleteAccountRequest;
+use App\Http\Requests\ForgotPasswordRequest;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\ResetPasswordRequest;
+use App\Http\Requests\VerifyOtpRequest;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -116,7 +116,7 @@ class AuthController extends Controller
      */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        
+
         try {
             $this->authService->forgotPassword($request->input('identifier'));
 
@@ -144,7 +144,7 @@ class AuthController extends Controller
                 $request->input('otp')
             );
 
-            if (!$isValid) {
+            if (! $isValid) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid or expired OTP',
@@ -216,18 +216,18 @@ class AuthController extends Controller
         ]);
     }
 
-    public function deleteAccount(Request $request): JsonResponse
+    public function deleteAccount(DeleteAccountRequest $request): JsonResponse
     {
         try {
             $this->authService->deleteAccount($request->user());
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete account',
                 'error' => $e->getMessage(),
             ], 500);
         }
+
         return response()->json([
             'success' => true,
             'message' => 'Account deleted successfully',
@@ -242,9 +242,9 @@ class AuthController extends Controller
         try {
             $user = $request->user();
 
-            // Update password
+            // Let the User model's "hashed" cast hash the plain password once (avoid double hashing).
             $user->update([
-                'password' => Hash::make($request->input('password')),
+                'password' => $request->input('password'),
             ]);
 
             // Revoke all tokens except the current one (optional - for security)

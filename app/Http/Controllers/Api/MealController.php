@@ -7,6 +7,8 @@ use App\Models\Meal;
 use App\Services\FrequencyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class MealController extends Controller
 {
@@ -16,50 +18,83 @@ class MealController extends Controller
      */
     public function frequency(Request $request): JsonResponse
     {
-        $frequencyType = $request->input('frequency_type', FrequencyService::FREQUENCY_WEEKLY);
-        if (! in_array($frequencyType, FrequencyService::VALID_TYPES, true)) {
-            $frequencyType = FrequencyService::FREQUENCY_WEEKLY;
-        }
+        try {
+            $frequencyType = $request->input('frequency_type', FrequencyService::FREQUENCY_WEEKLY);
+            if (! in_array($frequencyType, FrequencyService::VALID_TYPES, true)) {
+                $frequencyType = FrequencyService::FREQUENCY_WEEKLY;
+            }
 
-        $user = $request->user();
-        $service = app(FrequencyService::class);
-        $meals = $service->getFrequentlyOrderedMeals($user, $frequencyType);
+            $user = $request->user();
+            if ($user === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authentication required to view frequency meals.',
+                ], 401);
+            }
 
-        $data = $meals->map(function ($meal) {
-            return [
-                'id' => $meal->id,
-                'title' => $meal->title,
-                'slug' => $meal->slug,
-                'description' => $meal->description,
-                'image_url' => $meal->image_url,
-                'offer_title' => $meal->offer_title,
-                ...$meal->getApiPriceAttributes(),
-                'has_offer' => $meal->hasOffer(),
-                'category' => $meal->category ? [
-                    'id' => $meal->category->id,
-                    'name' => $meal->category->name,
-                ] : null,
-                'features' => $meal->features,
-                'available_date' => $meal->available_date,
-                'created_at' => $meal->created_at,
-                'order_count' => (int) $meal->getAttribute('order_count'),
+            $subcategoryId = $request->input('subcategory_id');
+            $subcategoryId = is_numeric($subcategoryId) ? (int) $subcategoryId : null;
+
+            $service = app(FrequencyService::class);
+            $meals = $service->getFrequentlyOrderedMeals($user, $frequencyType, 50, $subcategoryId);
+
+            $data = $meals->map(function ($meal) {
+                return [
+                    'id' => $meal->id,
+                    'title' => $meal->title,
+                    'slug' => $meal->slug,
+                    'description' => $meal->description,
+                    'image_url' => $meal->image_url,
+                    'offer_title' => $meal->offer_title,
+                    ...$meal->getApiPriceAttributes(),
+                    'has_offer' => $meal->hasOffer(),
+                    'category' => $meal->category ? [
+                        'id' => $meal->category->id,
+                        'name' => $meal->category->name,
+                    ] : null,
+                    'subcategory' => $meal->subcategory ? [
+                        'id' => $meal->subcategory->id,
+                        'name' => $meal->subcategory->name,
+                    ] : null,
+                    'features' => $meal->features,
+                    'available_date' => $meal->available_date,
+                    'created_at' => $meal->created_at,
+                    'order_count' => (int) $meal->getAttribute('order_count'),
+                ];
+            })->values();
+
+            $payload = [
+                'success' => true,
+                'message' => 'Frequency meals retrieved successfully',
+                'frequency_type' => $frequencyType,
+                'data' => $data,
             ];
-        })->values();
+            if ($subcategoryId !== null) {
+                $payload['subcategory_id'] = $subcategoryId;
+            }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Frequency meals retrieved successfully',
-            'frequency_type' => $frequencyType,
-            'data' => $data,
-        ]);
+            return response()->json($payload);
+        } catch (Throwable $e) {
+            Log::error('Frequency meals error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load frequency meals',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
+            ], 500);
+        }
     }
-    
+
     public function moreToExplore(Request $request)
     {
         $meals = Meal::with('category')
             ->available()
             ->orderBy('created_at', 'desc')
             ->get();
+
         return response()->json([
             'success' => true,
             'message' => 'More to explore retrieved successfully',
@@ -70,12 +105,14 @@ class MealController extends Controller
     public function brands(Request $request)
     {
         $brands = Meal::distinct()->pluck('brand');
+
         return response()->json([
             'success' => true,
             'message' => 'Brands retrieved successfully',
             'data' => $brands,
         ]);
     }
+
     public function slider(Request $request)
     {
         $meals = Meal::with('category')
@@ -108,6 +145,7 @@ class MealController extends Controller
             'data' => $meals,
         ]);
     }
+
     public function bestSells(Request $request)
     {
         $meals = Meal::with('category')
@@ -122,6 +160,7 @@ class MealController extends Controller
             'data' => $meals,
         ]);
     }
+
     public function newProducts(Request $request)
     {
 
@@ -130,6 +169,7 @@ class MealController extends Controller
                 ->available()
                 ->orderBy('created_at', 'desc')
                 ->get();
+
             return response()->json([
                 'success' => true,
                 'message' => 'New products retrieved successfully',
@@ -143,6 +183,7 @@ class MealController extends Controller
             ], 500);
         }
     }
+
     /**
      * Get hot / Ready-to-eat meals only.
      */
@@ -162,8 +203,8 @@ class MealController extends Controller
                         'description' => $meal->description,
                         'image_url' => $meal->image_url,
                         'offer_title' => $meal->offer_title,
-...$meal->getApiPriceAttributes(),
-                    'has_offer' => $meal->hasOffer(),
+                        ...$meal->getApiPriceAttributes(),
+                        'has_offer' => $meal->hasOffer(),
                         'category' => [
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
@@ -187,6 +228,7 @@ class MealController extends Controller
             ], 500);
         }
     }
+
     /**
      * Get today's deals (meals with active discounts)
      */
@@ -206,8 +248,8 @@ class MealController extends Controller
                         'description' => $meal->description,
                         'image_url' => $meal->image_url,
                         'offer_title' => $meal->offer_title,
-...$meal->getApiPriceAttributes(),
-                    'has_offer' => $meal->hasOffer(),
+                        ...$meal->getApiPriceAttributes(),
+                        'has_offer' => $meal->hasOffer(),
                         'category' => [
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
@@ -246,8 +288,7 @@ class MealController extends Controller
                 $search = $request->input('search');
                 $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%")
-                        ;
+                        ->orWhere('description', 'like', "%{$search}%");
                 });
             }
 
@@ -302,7 +343,7 @@ class MealController extends Controller
             $allowedSortFields = ['created_at', 'price', 'rating', 'title', 'sold_count'];
             if (in_array($sortBy, $allowedSortFields)) {
                 if ($sortBy === 'price') {
-                    $query->orderByRaw('COALESCE(discount_price, price) ' . $sortOrder);
+                    $query->orderByRaw('COALESCE(discount_price, price) '.$sortOrder);
                 } else {
                     $query->orderBy($sortBy, $sortOrder);
                 }
@@ -325,8 +366,8 @@ class MealController extends Controller
                         'description' => $meal->description,
                         'image_url' => $meal->image_url,
                         'offer_title' => $meal->offer_title,
-...$meal->getApiPriceAttributes(),
-                    'has_offer' => $meal->hasOffer(),
+                        ...$meal->getApiPriceAttributes(),
+                        'has_offer' => $meal->hasOffer(),
                         'rating' => (float) $meal->rating,
                         'rating_count' => (int) $meal->rating_count,
                         'size' => $meal->size,
@@ -351,6 +392,7 @@ class MealController extends Controller
 
             $totalCount = $meals->count();
             $isEmpty = $totalCount === 0;
+
             return response()->json(array_merge([
                 'success' => true,
                 'message' => $isEmpty ? 'No products match your filters.' : 'Meals retrieved successfully',

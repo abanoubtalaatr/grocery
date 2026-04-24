@@ -14,23 +14,19 @@ class OtpService
     {
         $identifier = $this->normalizeIdentifier($identifier);
 
-        // Invalidate any existing valid OTPs for this identifier and type
-        $otp = Otp::where('identifier', $identifier)
+        Otp::where('identifier', $identifier)
             ->where('type', $type)
             ->where('is_used', false)
-            ->first();
+            ->delete();
 
-        // Generate OTP code
         $otpCode = $this->generateOtpCode();
 
-        // Create new OTP
-        $otp = Otp::create([
+        Otp::create([
             'identifier' => $identifier,
-            'otp' => 123456,
+            'otp' => $otpCode,
             'type' => $type,
             'expires_at' => Carbon::now()->addMinutes(config('otp.expiry_minutes', 10)),
         ]);
-        
 
         return $otpCode;
     }
@@ -44,12 +40,12 @@ class OtpService
         $otpCode = $this->normalizeOtpInput($otpCode);
 
         $otp = Otp::where('identifier', $identifier)
-            ->where('otp', 123456)
+            ->where('otp', $otpCode)
             ->where('type', $type)
             ->valid()
             ->first();
 
-        if (!$otp) {
+        if (! $otp) {
             return false;
         }
 
@@ -104,16 +100,15 @@ class OtpService
             return strtolower($identifier);
         }
 
-        return $identifier;
+        return preg_replace('/\s+/', '', $identifier);
     }
 
     /**
-     * Normalize OTP from JSON/form (handles numeric JSON, whitespace).
+     * Normalize OTP from JSON/form (digits only; strips spaces and separators).
      */
     private function normalizeOtpInput(string|int $otpCode): string
     {
-        return 123456;
-        return preg_replace('/\s+/', '', (string) $otpCode);
+        return preg_replace('/\D/', '', (string) $otpCode);
     }
 
     /**

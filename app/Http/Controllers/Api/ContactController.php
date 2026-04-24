@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\ContactMessageResource;
 use App\Http\Resources\ContactMessageCollection;
-use App\Models\ContactMessage;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Mail;
+use App\Http\Resources\ContactMessageResource;
 use App\Mail\ContactMessageReceived;
+use App\Models\ContactMessage;
+use App\Support\EmailValidation;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 
 class ContactController extends Controller
 {
@@ -21,24 +22,28 @@ class ContactController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
+            'email' => ['required', ...EmailValidation::formatRules(), 'max:255'],
             'phone' => 'nullable|string|max:20',
             'subject' => 'required|string|max:255',
             'message' => 'required|string|min:10|max:250',
             // 'g-recaptcha-response' => 'required|recaptcha' // If using reCAPTCHA
+        ], [
+            'email.not_regex' => EmailValidation::trailingHyphenDotBeforeAtMessage(),
+            'email.regex' => EmailValidation::domainStructureMessage(),
+            'email.max' => 'The email address may not exceed 255 characters.',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         // Check for spam (simple check for demo)
         if ($this->isSpam($request->message, $request->email)) {
             return response()->json([
-                'message' => 'Your message appears to be spam'
+                'message' => 'Your message appears to be spam',
             ], 400);
         }
 
@@ -63,12 +68,12 @@ class ContactController extends Controller
                 ->send(new \App\Mail\ContactAutoReply($contactMessage));
 
         } catch (\Exception $e) {
-            Log::error('Failed to send contact email: ' . $e->getMessage());
+            Log::error('Failed to send contact email: '.$e->getMessage());
         }
 
         return response()->json([
             'message' => 'Thank you for your message. We will get back to you soon.',
-            'data' => new ContactMessageResource($contactMessage)
+            'data' => new ContactMessageResource($contactMessage),
         ], 201);
     }
 
@@ -97,11 +102,11 @@ class ContactController extends Controller
         // Search
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('email', 'LIKE', "%{$search}%")
-                  ->orWhere('subject', 'LIKE', "%{$search}%")
-                  ->orWhere('message', 'LIKE', "%{$search}%");
+                    ->orWhere('email', 'LIKE', "%{$search}%")
+                    ->orWhere('subject', 'LIKE', "%{$search}%")
+                    ->orWhere('message', 'LIKE', "%{$search}%");
             });
         }
 
@@ -140,24 +145,24 @@ class ContactController extends Controller
 
         $validator = Validator::make($request->all(), [
             'status' => 'required|in:read,replied,spam',
-            'admin_notes' => 'nullable|string'
+            'admin_notes' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Validation failed',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $contactMessage->update([
             'status' => $request->status,
-            'admin_notes' => $request->admin_notes
+            'admin_notes' => $request->admin_notes,
         ]);
 
         return response()->json([
             'message' => 'Status updated successfully',
-            'data' => new ContactMessageResource($contactMessage)
+            'data' => new ContactMessageResource($contactMessage),
         ]);
     }
 
@@ -171,7 +176,7 @@ class ContactController extends Controller
         $contactMessage->delete();
 
         return response()->json([
-            'message' => 'Message deleted successfully'
+            'message' => 'Message deleted successfully',
         ]);
     }
 
@@ -195,10 +200,10 @@ class ContactController extends Controller
             SUM(CASE WHEN status = "new" THEN 1 ELSE 0 END) as new,
             SUM(CASE WHEN status = "replied" THEN 1 ELSE 0 END) as replied
         ')
-        ->where('created_at', '>=', now()->subMonths(6))
-        ->groupBy('month')
-        ->orderBy('month')
-        ->get();
+            ->where('created_at', '>=', now()->subMonths(6))
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
 
         return response()->json([
             'data' => [
@@ -207,8 +212,8 @@ class ContactController extends Controller
                 'read' => $read,
                 'replied' => $replied,
                 'spam' => $spam,
-                'monthly_stats' => $monthlyStats
-            ]
+                'monthly_stats' => $monthlyStats,
+            ],
         ]);
     }
 
@@ -219,11 +224,11 @@ class ContactController extends Controller
     {
         $spamKeywords = [
             'viagra', 'casino', 'loan', 'debt', 'free money',
-            'work from home', 'make money fast', 'click here'
+            'work from home', 'make money fast', 'click here',
         ];
 
         $message = strtolower($message);
-        
+
         foreach ($spamKeywords as $keyword) {
             if (str_contains($message, $keyword)) {
                 return true;

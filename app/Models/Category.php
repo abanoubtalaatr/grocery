@@ -11,6 +11,9 @@ class Category extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /** Fallback when no image is stored (API always exposes a usable URL). */
+    public const DEFAULT_IMAGE_URL = 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -70,19 +73,17 @@ class Category extends Model
     /**
      * Get the image URL attribute.
      */
-    public function getImageUrlAttribute(): ?string
+    public function getImageUrlAttribute(): string
     {
-        if (!$this->image) {
-            return null;
+        if (! $this->image) {
+            return self::DEFAULT_IMAGE_URL;
         }
 
-        // If it's already a full URL, return as is
         if (Str::startsWith($this->image, ['http://', 'https://'])) {
             return $this->image;
         }
 
-        // Otherwise, generate URL from storage
-        return asset('storage/' . $this->image);
+        return asset('storage/'.$this->image);
     }
 
     /**
@@ -93,13 +94,13 @@ class Category extends Model
         parent::boot();
 
         static::creating(function ($category) {
-            if (!$category->slug) {
+            if (! $category->slug) {
                 $category->slug = Str::slug($category->name);
             }
         });
 
         static::updating(function ($category) {
-            if ($category->isDirty('name') && !$category->isDirty('slug')) {
+            if ($category->isDirty('name') && ! $category->isDirty('slug')) {
                 $category->slug = Str::slug($category->name);
             }
         });
