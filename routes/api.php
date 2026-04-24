@@ -155,6 +155,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Payment routes
     Route::prefix('payments')->group(function () {
         Route::post('/stripe/checkout-session', [StripeCheckoutController::class, 'store']);
+        Route::get('/stripe/verify-session/{session_id}', [StripeCheckoutController::class, 'verifySession']);
         Route::get('/history', [PaymentController::class, 'paymentHistory']);
         Route::get('/receipt/{order}', [PaymentController::class, 'receipt']);
         Route::get('/invoice/{order}', [PaymentController::class, 'invoice']);
