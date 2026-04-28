@@ -14,15 +14,20 @@ use Throwable;
 class GoogleAuthController extends Controller
 {
     private const INVALID_GOOGLE_TOKEN_MESSAGE = 'Invalid Google token.';
+    private const ALLOWED_GOOGLE_ISSUERS = [
+        'accounts.google.com',
+        'https://accounts.google.com',
+    ];
 
     public function login(Request $request): JsonResponse
     {
         $request->validate([
             'id_token' => ['required', 'string'],
+            'device_name' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $clientId = config('services.google.client_id');
-        if (empty($clientId)) {
+        $allowedClientIds = $this->allowedGoogleClientIds();
+        if (empty($allowedClientIds)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Google sign-in is not configured.',
@@ -30,7 +35,9 @@ class GoogleAuthController extends Controller
         }
 
         try {
-            $client = new GoogleClient(['client_id' => $clientId]);
+            // Do not pin verification to one client_id so web/mobile tokens can all pass signature checks.
+            // We enforce allowed audiences manually in isValidGooglePayload().
+            $client = new GoogleClient;
             $payload = $client->verifyIdToken($request->input('id_token'));
         } catch (Throwable $e) {
             Log::warning('Google ID token verification failed', ['message' => $e->getMessage()]);
@@ -41,7 +48,7 @@ class GoogleAuthController extends Controller
             ], 401);
         }
 
-        if (! is_array($payload) || empty($payload['email'])) {
+        if (! is_array($payload) || ! $this->isValidGooglePayload($payload, $allowedClientIds)) {
             return response()->json([
                 'success' => false,
                 'message' => self::INVALID_GOOGLE_TOKEN_MESSAGE,
@@ -86,7 +93,8 @@ class GoogleAuthController extends Controller
                 ]);
             }
 
-            $token = $user->createToken('google_auth')->plainTextToken;
+            $deviceName = trim((string) $request->input('device_name', 'google_auth'));
+            $token = $user->createToken($deviceName !== '' ? $deviceName : 'google_auth')->plainTextToken;
 
             return response()->json([
                 'success' => true,
@@ -153,5 +161,50 @@ class GoogleAuthController extends Controller
         }
 
         return Str::limit($candidate, User::USERNAME_MAX_LENGTH, '');
+    }
+
+    /**
+     * Accepts old config key (client_id) and new key (client_ids array).
+     *
+     * @return array<int, string>
+     */
+    private function allowedGoogleClientIds(): array
+    {
+        $clientIds = config('services.google.client_ids', []);
+        if (! is_array($clientIds)) {
+            $clientIds = [];
+        }
+
+        $legacyClientId = config('services.google.client_id');
+        if (is_string($legacyClientId) && trim($legacyClientId) !== '') {
+            $clientIds[] = $legacyClientId;
+        }
+
+        return array_values(array_unique(array_filter(array_map(
+            static fn ($id) => is_string($id) ? trim($id) : '',
+            $clientIds
+        ))));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<int, string>  $allowedClientIds
+     */
+    private function isValidGooglePayload(array $payload, array $allowedClientIds): bool
+    {
+        $audience = (string) ($payload['aud'] ?? '');
+        $issuer = (string) ($payload['iss'] ?? '');
+        $email = (string) ($payload['email'] ?? '');
+        $emailVerified = filter_var($payload['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $subject = (string) ($payload['sub'] ?? '');
+        $expiry = (int) ($payload['exp'] ?? 0);
+
+        return $audience !== ''
+            && in_array($audience, $allowedClientIds, true)
+            && in_array($issuer, self::ALLOWED_GOOGLE_ISSUERS, true)
+            && $email !== ''
+            && $emailVerified
+            && $subject !== ''
+            && $expiry > now()->timestamp;
     }
 }
