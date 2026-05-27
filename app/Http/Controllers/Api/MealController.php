@@ -205,6 +205,11 @@ class MealController extends Controller
                         'offer_title' => $meal->offer_title,
                         ...$meal->getApiPriceAttributes(),
                         'has_offer' => $meal->hasOffer(),
+                        'rating' => (float) $meal->rating,
+                        'rating_count' => (int) $meal->rating_count,
+                        'brand' => $meal->brand,
+                        'stock_quantity' => (int) $meal->stock_quantity,
+                        'in_stock' => $meal->isInStock(),
                         'category' => [
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
@@ -250,6 +255,11 @@ class MealController extends Controller
                         'offer_title' => $meal->offer_title,
                         ...$meal->getApiPriceAttributes(),
                         'has_offer' => $meal->hasOffer(),
+                        'rating' => (float) $meal->rating,
+                        'rating_count' => (int) $meal->rating_count,
+                        'brand' => $meal->brand,
+                        'stock_quantity' => (int) $meal->stock_quantity,
+                        'in_stock' => $meal->isInStock(),
                         'category' => [
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
