@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             SubcategorySeeder::class,
             MealSeeder::class,
+            LargeMealSeeder::class,
             FaqSeeder::class,
             StaticPageSeeder::class,
             ContactMessageSeeder::class,
