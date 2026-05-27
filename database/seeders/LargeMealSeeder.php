@@ -10,7 +10,8 @@ class LargeMealSeeder extends Seeder
     public function run(): void
     {
         // Avoid accidental re-seeding huge catalogs on environments where data already exists.
-        if (Meal::query()->count() >= 500) {
+        $force = (string) env('FORCE_LARGE_SEED', '') === '1';
+        if (! $force && Meal::query()->count() >= 500) {
             $this->command?->info('LargeMealSeeder skipped (meals already seeded).');
             return;
         }
