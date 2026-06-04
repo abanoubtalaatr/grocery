@@ -9,6 +9,7 @@ class ChatbotMessage extends Model
 {
     protected $fillable = [
         'user_id',
+        'session_id',
         'question',
         'answer',
         'rating',

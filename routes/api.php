@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ChatbotController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\LoyaltyController;
 use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\MealController;
@@ -163,6 +164,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Dashboard route
     Route::get('/dashboard', [DashboardController::class, 'index']);
+
+    // Loyalty & rewards
+    Route::get('/loyalty', [LoyaltyController::class, 'index']);
 
     // Personalized "frequency" meals (requires auth — uses order history)
     Route::get('/frequency', [MealController::class, 'frequency']);

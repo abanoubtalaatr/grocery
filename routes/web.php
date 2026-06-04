@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\StripePaymentCallbackController;
+use App\Http\Controllers\WebChatController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +22,12 @@ Route::get('/', function () {
         'version' => '1.0.0',
         'documentation' => '/api/documentation',
     ]);
+});
+
+Route::prefix('chat')->group(function () {
+    Route::get('/', [WebChatController::class, 'index'])->name('chat');
+    Route::post('/send', [WebChatController::class, 'send'])->name('chat.send');
+    Route::post('/reset', [WebChatController::class, 'reset'])->name('chat.reset');
 });
 
 Route::prefix('payment')->group(function () {
