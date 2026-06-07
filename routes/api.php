@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\SmartListController;
 use App\Http\Controllers\Api\SpecialNoteController;
 use App\Http\Controllers\Api\StaticPageController;
+use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\StripeCheckoutController;
 use App\Http\Controllers\Api\StripeController;
 use App\Http\Controllers\Api\StripeWebhookController;
@@ -167,6 +168,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Loyalty & rewards
     Route::get('/loyalty', [LoyaltyController::class, 'index']);
+
+    // Help & support — problem reports (authenticated)
+    Route::post('/support/report', [SupportController::class, 'store']);
 
     // Personalized "frequency" meals (requires auth — uses order history)
     Route::get('/frequency', [MealController::class, 'frequency']);
