@@ -23,6 +23,10 @@ class UserNotificationSetting extends Model
         'email_notifications',
         'push_notifications',
         'sms_notifications',
+        'order_updates',
+        'promotion_emails',
+        'nutrition_insights',
+        'price_alerts',
     ];
 
     protected $casts = [
@@ -38,6 +42,10 @@ class UserNotificationSetting extends Model
         'email_notifications' => 'boolean',
         'push_notifications' => 'boolean',
         'sms_notifications' => 'boolean',
+        'order_updates' => 'boolean',
+        'promotion_emails' => 'boolean',
+        'nutrition_insights' => 'boolean',
+        'price_alerts' => 'boolean',
     ];
 
     public function user()

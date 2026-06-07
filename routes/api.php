@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ChatbotController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DataManagementController;
 use App\Http\Controllers\Api\LoyaltyController;
 use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\FavoriteController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Api\SmartListController;
 use App\Http\Controllers\Api\SpecialNoteController;
 use App\Http\Controllers\Api\StaticPageController;
 use App\Http\Controllers\Api\SupportController;
+use App\Http\Controllers\Api\UserAppSettingsController;
 use App\Http\Controllers\Api\StripeCheckoutController;
 use App\Http\Controllers\Api\StripeController;
 use App\Http\Controllers\Api\StripeWebhookController;
@@ -171,6 +173,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Help & support — problem reports (authenticated)
     Route::post('/support/report', [SupportController::class, 'store']);
+
+    // App settings (profile settings page)
+    Route::get('/language', [UserAppSettingsController::class, 'showLanguage']);
+    Route::put('/language', [UserAppSettingsController::class, 'updateLanguage']);
+    Route::get('/appearance', [UserAppSettingsController::class, 'showAppearance']);
+    Route::put('/appearance', [UserAppSettingsController::class, 'updateAppearance']);
+    Route::get('/notification-preferences', [UserAppSettingsController::class, 'showNotificationPreferences']);
+    Route::put('/notification-preferences', [UserAppSettingsController::class, 'updateNotificationPreferences']);
+
+    Route::prefix('data-management')->group(function () {
+        Route::get('/download', [DataManagementController::class, 'download']);
+        Route::delete('/delete', [DataManagementController::class, 'delete']);
+    });
 
     // Personalized "frequency" meals (requires auth — uses order history)
     Route::get('/frequency', [MealController::class, 'frequency']);

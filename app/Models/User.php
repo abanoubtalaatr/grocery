@@ -48,6 +48,8 @@ class User extends Authenticatable implements HasName
         'loyalty_points',
         'store_credits',
         'preferred_languages',
+        'app_language',
+        'app_theme',
     ];
 
     /**
