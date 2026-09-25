@@ -2,7 +2,6 @@
 namespace App\Actions\Cart;
 
 use App\Models\CartItem;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class UpdateCartItemAction
@@ -23,9 +22,7 @@ class UpdateCartItemAction
             ]);
         }
 
-        DB::transaction(function () use ($cartItem, $quantity) {
-            $cartItem->update(['quantity' => $quantity]);
-            $cartItem->cart->calculateTotals();
-        });
+        $cartItem->update(['quantity' => $quantity]);
+        $cartItem->cart->calculateTotals();
     }
 }
