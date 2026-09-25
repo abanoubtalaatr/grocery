@@ -131,9 +131,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Favorites routes
     Route::prefix('favorites')->group(function () {
         Route::get('/', [FavoriteController::class, 'index']);
-        Route::post('/{mealId}/toggle', [FavoriteController::class, 'toggle']);
-        Route::get('/{mealId}/check', [FavoriteController::class, 'check']);
-        Route::delete('/{mealId}', [FavoriteController::class, 'remove']);
+        Route::post('/{meal}/toggle', [FavoriteController::class, 'toggle']);
+        Route::get('/{meal}/check', [FavoriteController::class, 'check']);
+        Route::delete('/{meal}', [FavoriteController::class, 'remove']);
     });
 
     // Chatbot routes
