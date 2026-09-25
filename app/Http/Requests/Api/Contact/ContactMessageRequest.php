@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Api\Contact;
 
 use App\Support\EmailValidation;
 use Illuminate\Foundation\Http\FormRequest;
