@@ -218,8 +218,8 @@ Route::prefix('offers')->group(function () {
 });
 Route::prefix('categories')->group(function () {
     Route::get('/', [CategoryController::class, 'index']);
-    Route::get('/{id}', [CategoryController::class, 'show']);
-    Route::get('/{id}/meals', [CategoryController::class, 'meals']);
+    Route::get('/{category}', [CategoryController::class, 'show']);
+    Route::get('/{category}/meals', [CategoryController::class, 'meals']);
 });
 
 // Subcategories routes
