@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Ai\Agents\GroceryAssistant;
+use App\Models\ChatbotMessage;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Enums\Lab;
@@ -19,7 +20,7 @@ class ChatbotService
      *
      * @throws RuntimeException
      */
-    public function chat(User $user, string $question, ?string $conversationId, ?string $locale): array
+    public function chat(User $user, string $question, ?string $conversationId, ?string $locale, ?int $rating = null): array
     {
         $providerName = config('ai.default', 'anthropic');
         $model = config('ai.providers.'.$providerName.'.models.text.default', config('ai.providers.'.$providerName.'.model'));
@@ -51,17 +52,18 @@ class ChatbotService
         }
 
         $message = $user->chatbotMessages()->create([
-            'question' => $question,
-            'answer' => $answer,
+            'question'   => $question,
+            'answer'     => $answer,
             'session_id' => $conversationId,
+            'rating'     => $rating,
         ]);
 
         return [
-            'id' => $message->id,
+            'id'              => $message->id,
             'conversation_id' => $conversationId,
-            'question' => $question,
-            'answer' => $answer,
-            'rating' => null,
+            'question'        => $question,
+            'answer'          => $answer,
+            'rating'          => $rating,
         ];
     }
 }

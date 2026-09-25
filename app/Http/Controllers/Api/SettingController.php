@@ -2,51 +2,44 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Setting\UpdateSettingAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SettingRequest;
-use App\Http\Resources\SettingResource;
+use App\Http\Resources\Api\SettingResource;
 use App\Models\Setting;
+use App\Traits\ResponseTrait;
 use Illuminate\Http\JsonResponse;
 
 class SettingController extends Controller
 {
+    use ResponseTrait;
+
     /**
      * Get settings
      */
     public function index(): JsonResponse
     {
         $settings = Setting::getSettings();
-        return response()->json([
-            'success' => true,
-            'data' => new SettingResource($settings)
-        ]);
+
+        return $this->successResponse(
+            new SettingResource($settings),
+            'Settings retrieved successfully'
+        );
     }
 
     /**
      * Update settings
      */
-    public function update( $request): JsonResponse
+    public function update(SettingRequest $request, UpdateSettingAction $action): JsonResponse
     {
         $settings = Setting::getSettings();
-        
-        $data = $request->validated();
-        
-        // Handle file uploads if needed
-        if ($request->hasFile('logo')) {
-            $data['logo'] = $request->file('logo')->store('settings', 'public');
-        }
-        
-        if ($request->hasFile('favicon')) {
-            $data['favicon'] = $request->file('favicon')->store('settings', 'public');
-        }
-        
-        $settings->update($data);
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Settings updated successfully',
-            'data' => new SettingResource($settings)
-        ]);
+
+        $updatedSettings = $action->execute($settings, $request);
+
+        return $this->successResponse(
+            new SettingResource($updatedSettings),
+            'Settings updated successfully'
+        );
     }
 
     /**
@@ -55,23 +48,10 @@ class SettingController extends Controller
     public function publicSettings(): JsonResponse
     {
         $settings = Setting::getSettings();
-        
-        return response()->json([
-            'site_name' => $settings->site_name,
-            'site_description' => $settings->site_description,
-            'social_media' => [
-                'facebook' => $settings->facebook,
-                'linkedin' => $settings->linkedin,
-                'instagram' => $settings->instagram,
-                'twitter' => $settings->twitter,
-            ],
-            'contact' => [
-                'email' => $settings->email,
-                'phone' => $settings->phone,
-                'address' => $settings->address,
-            ],
-            'logo' => $settings->logo,
-            'copyright' => $settings->copyright_text,
-        ]);
+
+        return $this->successResponse(
+            new SettingResource($settings),
+            'Public settings retrieved successfully'
+        );
     }
 }

@@ -309,4 +309,49 @@ class Meal extends Model
     {
         return $this->hasMany(Review::class);
     }
+
+
+    public function scopeFilter($query, array $filters)
+{
+    $query->when($filters['search'] ?? null, fn ($q, $search) => 
+        $q->where(fn ($sub) => 
+            $sub->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+        )
+    )
+    ->when($filters['category_id'] ?? null, fn ($q, $id) => $q->where('category_id', $id))
+    ->when($filters['subcategory_id'] ?? null, fn ($q, $id) => $q->where('subcategory_id', $id))
+    ->when(isset($filters['featured']), fn ($q) => 
+        filter_var($filters['featured'], FILTER_VALIDATE_BOOLEAN) ? $q->featured() : $q->where('is_featured', false)
+    )
+    ->when(isset($filters['in_stock']), fn ($q) => 
+        filter_var($filters['in_stock'], FILTER_VALIDATE_BOOLEAN) ? $q->inStock() : $q->outOfStock()
+    )
+    ->when($filters['min_price'] ?? null, fn ($q, $min) => $q->whereRaw('COALESCE(discount_price, price) >= ?', [$min]))
+    ->when($filters['max_price'] ?? null, fn ($q, $max) => $q->whereRaw('COALESCE(discount_price, price) <= ?', [$max]))
+    ->when($filters['min_rating'] ?? null, fn ($q, $rating) => $q->where('rating', '>=', $rating))
+    ->when($filters['brand'] ?? null, fn ($q, $brand) => $q->where('brand', $brand));
+
+    // Sorting
+    $sortBy = $filters['sort_by'] ?? 'created_at';
+    $sortOrder = strtolower($filters['sort_order'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+
+    if ($sortBy === 'newest') {
+        $sortBy = 'created_at';
+        $sortOrder = 'desc';
+    }
+
+    $allowedSorts = ['created_at', 'price', 'rating', 'title', 'sold_count'];
+    if (in_array($sortBy, $allowedSorts, true)) {
+        if ($sortBy === 'price') {
+            $query->orderByRaw('COALESCE(discount_price, price) ' . $sortOrder);
+        } else {
+            $query->orderBy($sortBy, $sortOrder);
+        }
+    } else {
+        $query->orderBy('created_at', 'desc');
+    }
+
+    return $query;
+}
 }
