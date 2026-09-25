@@ -120,7 +120,7 @@ class AuthService
      */
     public function verifyOtp(string $identifier, string $otp): bool
     {
-        return $this->otpService->verify($identifier, $otp, 'password_reset');
+        return $this->otpService->isValid($identifier, $otp, 'password_reset');
     }
 
     /**
@@ -128,12 +128,11 @@ class AuthService
      */
     public function resetPassword(string $identifier, string $otp, string $newPassword): bool
     {
-        // Verify OTP
-        // if (!$this->otpService->isValid($identifier, $otp, 'password_reset')) {
-        //     throw ValidationException::withMessages([
-        //         'otp' => ['The OTP is invalid or has expired.'],
-        //     ]);
-        // }
+        if (! $this->otpService->verify($identifier, $otp, 'password_reset')) {
+            throw ValidationException::withMessages([
+                'otp' => ['The OTP is invalid or has expired.'],
+            ]);
+        }
 
         // Find user
         $user = User::findByIdentifier($identifier);
@@ -147,9 +146,6 @@ class AuthService
         // Update password
         $user->password = Hash::make($newPassword);
         $user->save();
-
-        // Mark OTP as used
-        $this->otpService->verify($identifier, $otp, 'password_reset');
 
         // Revoke all existing tokens
         $user->tokens()->delete();

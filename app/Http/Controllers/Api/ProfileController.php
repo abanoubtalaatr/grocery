@@ -12,7 +12,6 @@ use App\Support\EmailValidation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
@@ -26,8 +25,7 @@ class ProfileController extends Controller
      */
     public function show(Request $request): JsonResponse
     {
-        try {
-            $user = $request->user();
+        $user = $request->user();
             $user->load(['addresses', 'favorites.meal.category', 'favorites.meal.subcategory']);
 
             $addresses = $user->addresses()
@@ -60,7 +58,7 @@ class ProfileController extends Controller
             $sessions = $this->formatSessions($user);
             $wishlist = $user->favorites->map(fn ($f) => $this->formatWishlistItem($f))->values();
 
-            return response()->json([
+        return response()->json([
                 'success' => true,
                 'message' => 'Profile retrieved successfully',
                 'data' => [
@@ -98,14 +96,7 @@ class ProfileController extends Controller
                     ],
                     'wishlist' => $wishlist,
                 ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve profile',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        ]);
     }
 
     /**
@@ -113,14 +104,13 @@ class ProfileController extends Controller
      */
     public function updateImage(Request $request): JsonResponse
     {
-        try {
-            if (count($request->allFiles()) > 1) {
+        if (count($request->allFiles()) > 1) {
                 return response()->json([
                     'success' => false,
                     'message' => self::PROFILE_SINGLE_IMAGE_MESSAGE,
                     'errors' => ['image' => [self::PROFILE_SINGLE_IMAGE_MESSAGE]],
                 ], 422);
-            }
+        }
 
             $uploaded = $request->file('image');
             if (is_array($uploaded)) {
@@ -131,17 +121,9 @@ class ProfileController extends Controller
                 ], 422);
             }
 
-            $validator = Validator::make($request->all(), [
+            $request->validate([
                 'image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'], // 2MB max
             ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
 
             $user = $request->user();
 
@@ -157,21 +139,14 @@ class ProfileController extends Controller
             // Update user
             $user->update(['profile_image' => $path]);
 
-            return response()->json([
+        return response()->json([
                 'success' => true,
                 'message' => 'Profile image updated successfully',
                 'data' => [
                     'profile_image' => $user->profile_image,
                     'profile_image_url' => $user->profile_image_url,
                 ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update profile image',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        ]);
     }
 
     /**
@@ -179,14 +154,13 @@ class ProfileController extends Controller
      */
     public function updateInfo(Request $request): JsonResponse
     {
-        try {
-            $user = $request->user();
+        $user = $request->user();
 
             if ($request->has('phone') && is_string($request->input('phone'))) {
                 $request->merge(['phone' => preg_replace('/\s+/', '', $request->input('phone'))]);
             }
 
-            $validator = Validator::make($request->all(), [
+            $data = $request->validate([
                 'username' => ['sometimes', 'string', 'max:'.User::USERNAME_MAX_LENGTH, Rule::unique('users')->ignore($user->id), 'not_regex:/\s/u', 'alpha_dash', new UsernameMustContainLetter],
                 'firstname' => ['sometimes', 'string', 'max:255'],
                 'lastname' => ['sometimes', 'string', 'max:255'],
@@ -210,16 +184,8 @@ class ProfileController extends Controller
                 'phone.max' => EgyptianPhoneRules::lengthMessage(),
             ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
             // Update only provided fields
-            $data = $request->only(['username', 'firstname', 'lastname', 'gender', 'birthday', 'email', 'phone', 'country_code', 'preferred_languages']);
+            $data = array_intersect_key($data, array_flip(['username', 'firstname', 'lastname', 'gender', 'birthday', 'email', 'phone', 'country_code', 'preferred_languages']));
 
             // Handle preferred_languages separately (can be empty array)
             if ($request->has('preferred_languages')) {
@@ -244,7 +210,7 @@ class ProfileController extends Controller
 
             $user->update($data);
 
-            return response()->json([
+        return response()->json([
                 'success' => true,
                 'message' => 'Profile updated successfully',
                 'data' => [
@@ -262,14 +228,7 @@ class ProfileController extends Controller
                     'profile_image_url' => $user->profile_image_url,
                     'updated_at' => $user->updated_at,
                 ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update profile',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        ]);
     }
 
     /**
@@ -277,8 +236,7 @@ class ProfileController extends Controller
      */
     public function deleteImage(Request $request): JsonResponse
     {
-        try {
-            $user = $request->user();
+        $user = $request->user();
 
             if (! $user->profile_image) {
                 return response()->json([
@@ -295,17 +253,10 @@ class ProfileController extends Controller
             // Update user
             $user->update(['profile_image' => null]);
 
-            return response()->json([
+        return response()->json([
                 'success' => true,
                 'message' => 'Profile image deleted successfully',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete profile image',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        ]);
     }
 
     /**

@@ -14,8 +14,7 @@ class SubcategoryController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        try {
-            $query = Subcategory::with('category')->active();
+        $query = Subcategory::with('category')->active();
 
             // Filter by category if provided
             if ($request->has('category_id')) {
@@ -42,18 +41,11 @@ class SubcategoryController extends Controller
                     ];
                 });
 
-            return response()->json([
+        return response()->json([
                 'success' => true,
                 'message' => 'Subcategories retrieved successfully',
                 'data' => $subcategories,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve subcategories',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        ]);
     }
 
     /**
@@ -61,12 +53,11 @@ class SubcategoryController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        try {
-            $subcategory = Subcategory::with(['category', 'meals' => function ($query) {
+        $subcategory = Subcategory::with(['category', 'meals' => function ($query) {
                 $query->available()->limit(10);
             }])->findOrFail($id);
 
-            return response()->json([
+        return response()->json([
                 'success' => true,
                 'message' => 'Subcategory retrieved successfully',
                 'data' => [
@@ -98,19 +89,7 @@ class SubcategoryController extends Controller
                     'created_at' => $subcategory->created_at,
                     'updated_at' => $subcategory->updated_at,
                 ],
-            ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Subcategory not found',
-            ], 404);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve subcategory',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        ]);
     }
 
     /**
@@ -118,8 +97,7 @@ class SubcategoryController extends Controller
      */
     public function meals(string $id, Request $request): JsonResponse
     {
-        try {
-            $subcategory = Subcategory::findOrFail($id);
+        $subcategory = Subcategory::findOrFail($id);
 
             $query = $subcategory->meals()->with('category')->available();
 
@@ -175,7 +153,7 @@ class SubcategoryController extends Controller
             });
 
             $total = $paginator->total();
-            return response()->json(array_merge([
+        return response()->json(array_merge([
                 'success' => true,
                 'message' => $total === 0 ? 'No products match your filters.' : 'Meals retrieved successfully',
                 'data' => [
@@ -194,18 +172,6 @@ class SubcategoryController extends Controller
                         'to' => $paginator->lastItem(),
                     ],
                 ],
-            ], $total === 0 ? ['empty_message' => 'No products match the applied filters. Try adjusting your filters.'] : []));
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Subcategory not found',
-            ], 404);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve meals',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        ], $total === 0 ? ['empty_message' => 'No products match the applied filters. Try adjusting your filters.'] : []));
     }
 }

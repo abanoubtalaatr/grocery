@@ -7,10 +7,12 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\SmartListRequest;
 use App\Http\Resources\Api\SmartListResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
 
 class SmartListController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $smartLists = SmartList::where('user_id', $request->user()->id)->with('meals')->get();
         return response()->json([
@@ -19,7 +21,7 @@ class SmartListController extends Controller
             'data' => SmartListResource::collection($smartLists),
         ]);
     }
-    public function store(SmartListRequest $request)
+    public function store(SmartListRequest $request): JsonResponse
     {
         $data = $request->validated();
         $data['user_id'] = $request->user()->id;
@@ -29,7 +31,7 @@ class SmartListController extends Controller
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $imageName = Str::uuid().'.'.$image->getClientOriginalExtension();
             $image->move(public_path('images/smart-lists'), $imageName);
             $data['image'] = $imageName;
         }
@@ -46,7 +48,7 @@ class SmartListController extends Controller
         ]);
     }
 
-    public function show(Request $request, $id)
+    public function show(Request $request, string $id): JsonResponse
     {
         $smartList = SmartList::where('user_id', $request->user()->id)->with('meals')->findOrFail($id);
         return response()->json([
@@ -55,7 +57,7 @@ class SmartListController extends Controller
             'data' => new SmartListResource($smartList),
         ]);
     }
-    public function update(SmartListRequest $request, $id)
+    public function update(SmartListRequest $request, string $id): JsonResponse
     {
         $smartList = SmartList::where('user_id', $request->user()->id)->findOrFail($id);
         $data = $request->validated();
@@ -67,7 +69,7 @@ class SmartListController extends Controller
 
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $imageName = Str::uuid().'.'.$image->getClientOriginalExtension();
             $image->move(public_path('images/smart-lists'), $imageName);
             $data['image'] = $imageName;
         }
@@ -84,7 +86,7 @@ class SmartListController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, $id)
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $smartList = SmartList::where('user_id', $request->user()->id)->findOrFail($id);
         $smartList->meals()->detach();
@@ -99,7 +101,7 @@ class SmartListController extends Controller
     /**
      * Add a meal to a wish list.
      */
-    public function addMeal(Request $request, string $id)
+    public function addMeal(Request $request, string $id): JsonResponse
     {
         $request->validate(['meal_id' => ['required', 'exists:meals,id']]);
         $smartList = SmartList::where('user_id', $request->user()->id)->findOrFail($id);
@@ -115,7 +117,7 @@ class SmartListController extends Controller
     /**
      * Remove a meal from a wish list.
      */
-    public function removeMeal(Request $request, string $id, string $mealId)
+    public function removeMeal(Request $request, string $id, string $mealId): JsonResponse
     {
         $smartList = SmartList::where('user_id', $request->user()->id)->findOrFail($id);
         $smartList->meals()->detach($mealId);

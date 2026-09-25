@@ -18,18 +18,10 @@ class LoyaltyController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        try {
-            return response()->json([
-                'success' => true,
-                'message' => 'Loyalty data retrieved successfully',
-                'data' => $this->loyaltyService->buildSummary($request->user()),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve loyalty data',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Loyalty data retrieved successfully',
+            'data' => $this->loyaltyService->buildSummary($request->user()),
+        ]);
     }
 }

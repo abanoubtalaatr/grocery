@@ -6,23 +6,28 @@ use App\Models\Offer;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\OfferResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class OfferController extends Controller
 {
     // Get all active offers
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $query = Offer::active();
         
         // Filter by type if provided
         if ($request->has('type')) {
-            $query->where('type', $request->type);
+            $query->where('type', $request->input('type'));
         }
         
         // Filter by minimum purchase
         if ($request->has('min_purchase')) {
-            $query->where('minimum_purchase', '<=', $request->min_purchase)
-                  ->orWhereNull('minimum_purchase');
+            $minimumPurchase = $request->input('min_purchase');
+            $query->where(function ($query) use ($minimumPurchase) {
+                $query->where('minimum_purchase', '<=', $minimumPurchase)
+                    ->orWhereNull('minimum_purchase');
+            });
         }
         
         // Featured offers only
@@ -32,7 +37,7 @@ class OfferController extends Controller
         
         // Search by title or code
         if ($request->has('search')) {
-            $search = $request->search;
+            $search = $request->input('search');
             $query->where(function($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
                   ->orWhere('code', 'like', "%{$search}%");
@@ -40,19 +45,22 @@ class OfferController extends Controller
         }
         
         // Order by
-        $orderBy = $request->get('order_by', 'created_at');
-        $orderDirection = $request->get('order_direction', 'desc');
+        $orderBy = $request->input('order_by', 'created_at');
+        $orderBy = in_array($orderBy, ['created_at', 'title', 'minimum_purchase'], true)
+            ? $orderBy : 'created_at';
+        $orderDirection = strtolower($request->input('order_direction', 'desc'));
+        $orderDirection = in_array($orderDirection, ['asc', 'desc'], true) ? $orderDirection : 'desc';
         $query->orderBy($orderBy, $orderDirection);
         
         // Pagination
-        $perPage = $request->get('per_page', 15);
+        $perPage = min(max($request->integer('per_page', 15), 1), 100);
         $offers = $query->paginate($perPage);
         
         return OfferResource::collection($offers);
     }
 
     // Get featured offers
-    public function featured()
+    public function featured(): AnonymousResourceCollection
     {
         $offers = Offer::featured()
             ->orderBy('created_at', 'desc')
@@ -63,7 +71,7 @@ class OfferController extends Controller
     }
 
     // Get offer by code
-    public function showByCode($code)
+    public function showByCode(string $code): OfferResource
     {
         $offer = Offer::where('code', $code)->firstOrFail();
         
@@ -71,7 +79,7 @@ class OfferController extends Controller
     }
 
     // Validate offer code
-    public function validateOffer(Request $request)
+    public function validateOffer(Request $request): JsonResponse
     {
         $request->validate([
             'code' => 'required|string',

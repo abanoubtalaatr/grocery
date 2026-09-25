@@ -3,25 +3,23 @@
 namespace App\Http\Controllers\Api;
 
 use Stripe\Stripe;
-use App\Models\Cart;
-use App\Models\Meal;
 use App\Models\Order;
-use App\Models\Address;
 use App\Models\OrderItem;
 use App\Models\OrderNote;
 use Stripe\PaymentIntent;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
 use App\Services\ShippingService;
+use Throwable;
 
 class OrderController extends Controller
 {
 
-    public function show(Request $request, Order $order)
+    public function show(Request $request, Order $order): JsonResponse
     {
+        abort_unless($order->user_id === $request->user()->id, 404);
         $order = $order->load(['items.meal', 'address']);
 
         return response()->json([
@@ -81,18 +79,14 @@ class OrderController extends Controller
             //     ], 400);
             // }
 
-            DB::beginTransaction();
+            $paymentResult = match ($validated['payment_method']) {
+                'stripe_checkout' => ['success' => true],
+                default => $this->processPayment($user, $validated, $total),
+            };
 
-            // $paymentResult = match ($validated['payment_method']) {
-            //     'stripe_checkout' => ['success' => true],
-            //     default => $this->processPayment($user, $validated, $total),
-            // };
-
-            // if (! $paymentResult['success']) {
-            //     DB::rollBack();
-
-            //     return response()->json($paymentResult['response'], 400);
-            // }
+            if (! $paymentResult['success']) {
+                return response()->json($paymentResult['response'], 400);
+            }
 
             $stripePaymentIntentId = $paymentResult['stripe_payment_intent_id'] ?? null;
 
@@ -120,8 +114,6 @@ class OrderController extends Controller
                     'notes' => $validated['notes'],
                 ]);
             }
-            DB::commit();
-
             $order->load(['items.meal', 'address']);
 
             return response()->json([
@@ -129,12 +121,11 @@ class OrderController extends Controller
                 'message' => 'Order created successfully',
                 'data' => $this->formatOrder($order),
             ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create order',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -272,12 +263,14 @@ class OrderController extends Controller
                 'success' => true,
                 'stripe_payment_intent_id' => $paymentIntent->id,
             ];
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             return [
                 'success' => false,
                 'response' => [
                     'success' => false,
-                    'message' => 'Payment processing failed: ' . $e->getMessage(),
+                    'message' => config('app.debug')
+                        ? 'Payment processing failed: '.$exception->getMessage()
+                        : 'Payment processing failed.',
                 ],
             ];
         }
@@ -347,8 +340,8 @@ class OrderController extends Controller
         try {
             $user = $request->user();
 
-            $orders = Order::
-                with(['items.meal.category', 'items.meal.subcategory', 'address'])
+            $orders = Order::where('user_id', $user->id)
+                ->with(['items.meal.category', 'items.meal.subcategory', 'address'])
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($order) {
@@ -361,11 +354,11 @@ class OrderController extends Controller
                 'data' => $orders,
                 'total_count' => $orders->count(),
             ]);
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve orders',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -457,11 +450,11 @@ class OrderController extends Controller
                     ],
                 ],
             ]);
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to track order',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }

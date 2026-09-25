@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Address;
 use App\Models\User;
 
 class AddressPolicy
@@ -14,7 +15,7 @@ class AddressPolicy
         //
     }
 
-    public function show(User $user, Address $address)
+    public function show(User $user, Address $address): bool
     {
         return $user->id === $address->user->id;
     }

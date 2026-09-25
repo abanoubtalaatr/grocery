@@ -88,7 +88,7 @@ class MealController extends Controller
         }
     }
 
-    public function moreToExplore(Request $request)
+    public function moreToExplore(Request $request): JsonResponse
     {
         $meals = Meal::with('category')
             ->available()
@@ -102,7 +102,7 @@ class MealController extends Controller
         ]);
     }
 
-    public function brands(Request $request)
+    public function brands(Request $request): JsonResponse
     {
         $brands = Meal::distinct()->pluck('brand');
 
@@ -113,7 +113,7 @@ class MealController extends Controller
         ]);
     }
 
-    public function slider(Request $request)
+    public function slider(Request $request): JsonResponse
     {
         $meals = Meal::with('category')
             ->available()
@@ -129,10 +129,10 @@ class MealController extends Controller
                     'offer_title' => $meal->offer_title,
                     ...$meal->getApiPriceAttributes(),
                     'has_offer' => $meal->hasOffer(),
-                    'category' => [
+                    'category' => $meal->category ? [
                         'id' => $meal->category->id,
                         'name' => $meal->category->name,
-                    ],
+                    ] : null,
                     'features' => $meal->features,
                     'available_date' => $meal->available_date,
                     'created_at' => $meal->created_at,
@@ -146,7 +146,7 @@ class MealController extends Controller
         ]);
     }
 
-    public function bestSells(Request $request)
+    public function bestSells(Request $request): JsonResponse
     {
         $meals = Meal::with('category')
             ->available()
@@ -161,7 +161,7 @@ class MealController extends Controller
         ]);
     }
 
-    public function newProducts(Request $request)
+    public function newProducts(Request $request): JsonResponse
     {
 
         try {
@@ -175,11 +175,11 @@ class MealController extends Controller
                 'message' => 'New products retrieved successfully',
                 'data' => $meals,
             ]);
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve meals',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -210,10 +210,10 @@ class MealController extends Controller
                         'brand' => $meal->brand,
                         'stock_quantity' => (int) $meal->stock_quantity,
                         'in_stock' => $meal->isInStock(),
-                        'category' => [
+                        'category' => $meal->category ? [
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
-                        ],
+                        ] : null,
                         'features' => $meal->features,
                         'available_date' => $meal->available_date,
                         'created_at' => $meal->created_at,
@@ -225,11 +225,11 @@ class MealController extends Controller
                 'message' => 'Hot meals retrieved successfully',
                 'data' => $meals,
             ]);
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve hot meals',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -260,10 +260,10 @@ class MealController extends Controller
                         'brand' => $meal->brand,
                         'stock_quantity' => (int) $meal->stock_quantity,
                         'in_stock' => $meal->isInStock(),
-                        'category' => [
+                        'category' => $meal->category ? [
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
-                        ],
+                        ] : null,
                         'features' => $meal->features,
                         'available_date' => $meal->available_date,
                         'created_at' => $meal->created_at,
@@ -275,11 +275,11 @@ class MealController extends Controller
                 'message' => 'Today\'s deals retrieved successfully',
                 'data' => $meals,
             ]);
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve today\'s deals',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -351,7 +351,7 @@ class MealController extends Controller
                 $sortOrder = 'desc';
             }
             $allowedSortFields = ['created_at', 'price', 'rating', 'title', 'sold_count'];
-            if (in_array($sortBy, $allowedSortFields)) {
+            if (in_array($sortBy, $allowedSortFields, true)) {
                 if ($sortBy === 'price') {
                     $query->orderByRaw('COALESCE(discount_price, price) '.$sortOrder);
                 } else {
@@ -386,10 +386,10 @@ class MealController extends Controller
                         'in_stock' => $meal->isInStock(),
                         'is_featured' => $meal->is_featured,
                         'sold_count' => $meal->sold_count,
-                        'category' => [
+                        'category' => $meal->category ? [
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
-                        ],
+                        ] : null,
                         'subcategory' => $meal->subcategory ? [
                             'id' => $meal->subcategory->id,
                             'name' => $meal->subcategory->name,
@@ -422,11 +422,11 @@ class MealController extends Controller
                     'sort_order' => $sortOrder,
                 ],
             ], $isEmpty ? ['empty_message' => 'No products match the applied filters. Try adjusting your search or filters.'] : []));
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve meals',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -470,11 +470,11 @@ class MealController extends Controller
                     ...$meal->getApiPriceAttributes(),
                     'has_offer' => $meal->hasOffer(),
                     'is_featured' => $meal->is_featured,
-                    'category' => [
+                    'category' => $meal->category ? [
                         'id' => $meal->category->id,
                         'name' => $meal->category->name,
                         'slug' => $meal->category->slug,
-                    ],
+                    ] : null,
                     'features' => $meal->features,
                     'recommendation_reason' => $this->getRecommendationReason($meal),
                 ];
@@ -485,11 +485,11 @@ class MealController extends Controller
                 'message' => 'Meal recommendations retrieved successfully',
                 'data' => $meals->values(),
             ]);
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve recommendations',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -568,11 +568,11 @@ class MealController extends Controller
                     'available_date' => $meal->available_date,
 
                     // Relationships
-                    'category' => [
+                    'category' => $meal->category ? [
                         'id' => $meal->category->id,
                         'name' => $meal->category->name,
                         'slug' => $meal->category->slug,
-                    ],
+                    ] : null,
                     'reviews' => $meal->reviews->map(function ($review) {
                         return [
                             'id' => $review->id,
@@ -601,11 +601,11 @@ class MealController extends Controller
                 'success' => false,
                 'message' => 'Meal not found',
             ], 404);
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve meal',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }

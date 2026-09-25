@@ -3,68 +3,125 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Actions\Address\StoreAddressAction;
+use App\Http\Requests\Api\Address\StoreAddressRequest;
+use App\Http\Resources\Api\AddressResource;
 use App\Models\Address;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
-use App\Traits\ApiResponse;
 
 class AddressController extends Controller
 {
-    use ApiResponse;
- 
-    /**
-     * Get all user addresses
-     */
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $addresses = $request->user()->addresses()
+            ->orderByDesc('is_default')
+            ->latest()
+            ->get();
 
-        $addresses = $user->addresses()->orderBy('is_default', 'desc')->orderBy('created_at', 'desc')->get();
-
-        return $this->success($addresses);
+        return response()->json([
+            'success' => true,
+            'data' => AddressResource::collection($addresses),
+        ]);
     }
 
-    /**
-     * Get single address
-     */
-    public function show(Request $request, Address $address): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
-        $this->authorize('show', $address);
+        $address = $this->findUserAddress($request, $id);
 
-        return $this->success($addresses);
+        return response()->json([
+            'success' => true,
+            'data' => new AddressResource($address),
+        ]);
     }
 
-    /**
-     * Create new address
-     */
     public function store(StoreAddressRequest $request, StoreAddressAction $action): JsonResponse
-    { 
-        $addresss = $action->handle($request->validated());
+    {
+        $user = $request->user();
+        $address = $action->handle($user, $request->validated());
 
-        return $this->success($addresses);
+        return response()->json([
+            'success' => true,
+            'message' => 'Address created successfully',
+            'data' => new AddressResource($address),
+        ], 201);
     }
 
-    /**
-     * Update address
-     */
-    public function update(Request $request, Address $address, UpdateAddressAction $action): JsonResponse
+    public function update(Request $request, string $id): JsonResponse
     {
-        $address = $action->handle($request->validated());
+        $address = $this->findUserAddress($request, $id);
+        $data = $request->validate([
+            'label' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'full_name' => ['sometimes', 'required', 'string', 'min:2', 'max:255'],
+            'phone' => ['sometimes', 'required', 'string', 'min:10', 'max:20', 'regex:/^\+?[1-9]\d{9,14}$/'],
+            'country_code' => ['sometimes', 'nullable', 'string', 'max:5', 'regex:/^\+\d{1,4}$/'],
+            'street_address' => ['sometimes', 'required', 'string', 'min:5', 'max:500'],
+            'building_number' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'floor' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'apartment' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'landmark' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'city' => ['sometimes', 'required', 'string', 'min:2', 'max:100'],
+            'state' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'postal_code' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'country' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'is_default' => ['sometimes', 'boolean'],
+            'latitude' => ['sometimes', 'nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['sometimes', 'nullable', 'numeric', 'between:-180,180'],
+        ]);
 
-        return $this->success($addresses);
+        $address->update($this->normalizePhone($data));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Address updated successfully',
+            'data' => new AddressResource($address->fresh()),
+        ]);
     }
 
-    /**
-     * Delete address
-     */
-    public function destroy(Request $request, Address $address): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
-        $this->authorize('', $address);
+        $address = $this->findUserAddress($request, $id);
         $address->delete();
 
-       return $this->success($addresses);   
+        return response()->json([
+            'success' => true,
+            'message' => 'Address deleted successfully',
+        ]);
     }
 
+    public function setDefault(Request $request, string $id): JsonResponse
+    {
+        $address = $this->findUserAddress($request, $id);
+
+        $request->user()->addresses()
+            ->where('id', '!=', $address->id)
+            ->update(['is_default' => false]);
+        $address->update(['is_default' => true]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Default address updated successfully',
+            'data' => new AddressResource($address->fresh()),
+        ]);
+    }
+
+    private function findUserAddress(Request $request, string $id): Address
+    {
+        return $request->user()->addresses()->findOrFail($id);
+    }
+
+    private function normalizePhone(array $data): array
+    {
+        if (! empty($data['phone']) && ! empty($data['country_code'])) {
+            $phone = trim($data['phone']);
+            $countryCode = trim($data['country_code']);
+
+            if (str_starts_with($phone, $countryCode)) {
+                $data['phone'] = substr($phone, strlen($countryCode));
+            }
+        }
+
+        return $data;
+    }
 }

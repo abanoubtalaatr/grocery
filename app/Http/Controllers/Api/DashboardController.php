@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Meal;
-use App\Models\Category;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,33 +18,25 @@ class DashboardController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        try {
-            $user = $request->user();
+        $user = $request->user();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Dashboard data retrieved successfully',
-                'data' => [
-                    'overview' => $this->getOverview($user),
-                    'shopping_insights' => $this->getShoppingInsights($user),
-                    'category_distribution' => $this->getCategoryDistribution($user),
-                    'recent_orders' => $this->getRecentOrders($user),
-                    'top_purchases' => $this->getTopPurchases($user),
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve dashboard data',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Dashboard data retrieved successfully',
+            'data' => [
+                'overview' => $this->getOverview($user),
+                'shopping_insights' => $this->getShoppingInsights($user),
+                'category_distribution' => $this->getCategoryDistribution($user),
+                'recent_orders' => $this->getRecentOrders($user),
+                'top_purchases' => $this->getTopPurchases($user),
+            ],
+        ]);
     }
 
     /**
      * Get overview statistics.
      */
-    private function getOverview($user): array
+    private function getOverview(User $user): array
     {
         // Active order tracking
         $activeOrder = Order::where('user_id', $user->id)
@@ -70,7 +60,6 @@ class DashboardController extends Controller
         $cart = $user->activeCart()->with('items')->first();
         $cartData = null;
         if ($cart) {
-            $cart->calculateTotals();
             $cartData = [
                 'items_count' => $cart->items->sum('quantity'),
                 'total' => (float) $cart->total,
@@ -114,7 +103,7 @@ class DashboardController extends Controller
     /**
      * Get shopping insights.
      */
-    private function getShoppingInsights($user): array
+    private function getShoppingInsights(User $user): array
     {
         $now = Carbon::now();
         $startOfMonth = $now->copy()->startOfMonth();
@@ -191,7 +180,7 @@ class DashboardController extends Controller
     /**
      * Get category distribution percentage.
      */
-    private function getCategoryDistribution($user): array
+    private function getCategoryDistribution(User $user): array
     {
         $orderItems = OrderItem::whereHas('order', function ($query) use ($user) {
                 $query->where('user_id', $user->id)
@@ -245,7 +234,7 @@ class DashboardController extends Controller
     /**
      * Get recent orders.
      */
-    private function getRecentOrders($user, int $limit = 5): array
+    private function getRecentOrders(User $user, int $limit = 5): array
     {
         $orders = Order::where('user_id', $user->id)
             ->with(['items.meal.category', 'items.meal.subcategory', 'address'])
@@ -269,7 +258,7 @@ class DashboardController extends Controller
     /**
      * Get top purchases (most purchased meals).
      */
-    private function getTopPurchases($user, int $limit = 10): array
+    private function getTopPurchases(User $user, int $limit = 10): array
     {
         $topMeals = OrderItem::whereHas('order', function ($query) use ($user) {
                 $query->where('user_id', $user->id)

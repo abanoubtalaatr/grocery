@@ -6,9 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Services\StripeWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Stripe\Exception\SignatureVerificationException;
-use Stripe\Webhook;
-use UnexpectedValueException;
 
 class StripeWebhookController extends Controller
 {
@@ -23,25 +20,14 @@ class StripeWebhookController extends Controller
             return response('Webhook not configured.', 500);
         }
 
-        $payload = $request->getContent();
-        $sigHeader = $request->header('Stripe-Signature');
+        $handled = $this->webhookService->handlePayload(
+            $request->getContent(),
+            $request->header('Stripe-Signature'),
+            $secret
+        );
 
-        try {
-            $event = Webhook::constructEvent(
-                $payload,
-                $sigHeader ?? '',
-                $secret
-            );
-        } catch (UnexpectedValueException|SignatureVerificationException) {
+        if (! $handled) {
             return response('Invalid payload or signature.', 400);
-        }
-
-        try {
-            $this->webhookService->handleEvent($event);
-        } catch (\Throwable $e) {
-            report($e);
-
-            return response('Handler error.', 500);
         }
 
         return response('OK', 200);

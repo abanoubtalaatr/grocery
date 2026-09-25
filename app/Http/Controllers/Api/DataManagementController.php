@@ -20,10 +20,14 @@ class DataManagementController extends Controller
     {
         $user = $request->user();
         $payload = $this->settingsService->buildDataExport($user);
-        $filename = 'grocery-user-data-'.$user->id.'-'.now()->format('Y-m-d').'.json';
+        $filename = sprintf(
+            'grocery-user-data-%d-%s.json',
+            $user->id,
+            now()->format('Y-m-d')
+        );
 
-        return response()->streamDownload(function () use ($payload) {
-            echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        return response()->streamDownload(function () use ($payload): void {
+            echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         }, $filename, [
             'Content-Type' => 'application/json',
         ]);
