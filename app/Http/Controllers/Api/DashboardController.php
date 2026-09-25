@@ -3,11 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Meal;
-use App\Models\Category;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,27 +17,19 @@ class DashboardController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        try {
-            $user = $request->user();
+        $user = $request->user();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Dashboard data retrieved successfully',
-                'data' => [
-                    'overview' => $this->getOverview($user),
-                    'shopping_insights' => $this->getShoppingInsights($user),
-                    'category_distribution' => $this->getCategoryDistribution($user),
-                    'recent_orders' => $this->getRecentOrders($user),
-                    'top_purchases' => $this->getTopPurchases($user),
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve dashboard data',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Dashboard data retrieved successfully',
+            'data' => [
+                'overview' => $this->getOverview($user),
+                'shopping_insights' => $this->getShoppingInsights($user),
+                'category_distribution' => $this->getCategoryDistribution($user),
+                'recent_orders' => $this->getRecentOrders($user),
+                'top_purchases' => $this->getTopPurchases($user),
+            ],
+        ]);
     }
 
     /**
@@ -69,8 +58,10 @@ class DashboardController extends Controller
         // Current cart
         $cart = $user->activeCart()->with('items')->first();
         $cartData = null;
+
         if ($cart) {
             $cart->calculateTotals();
+
             $cartData = [
                 'items_count' => $cart->items->sum('quantity'),
                 'total' => (float) $cart->total,
@@ -86,12 +77,18 @@ class DashboardController extends Controller
 
         // Upcoming delivery
         $upcomingDelivery = Order::where('user_id', $user->id)
-            ->whereIn('status', ['placed', 'processing', 'shipping', 'out_for_delivery'])
+            ->whereIn('status', [
+                'placed',
+                'processing',
+                'shipping',
+                'out_for_delivery',
+            ])
             ->whereNotNull('estimated_delivery_time')
             ->orderBy('estimated_delivery_time', 'asc')
             ->first();
 
         $upcomingDeliveryData = null;
+
         if ($upcomingDelivery) {
             $upcomingDeliveryData = [
                 'order_id' => $upcomingDelivery->id,
@@ -136,6 +133,7 @@ class DashboardController extends Controller
 
         // Average days between orders
         $averageDaysBetweenOrders = 0;
+
         if ($ordersCount > 1) {
             $orderDates = $ordersThisMonth->pluck('created_at')->sort();
             $totalDays = 0;
@@ -147,7 +145,9 @@ class DashboardController extends Controller
                 $intervals++;
             }
 
-            $averageDaysBetweenOrders = $intervals > 0 ? round($totalDays / $intervals, 1) : 0;
+            $averageDaysBetweenOrders = $intervals > 0
+                ? round($totalDays / $intervals, 1)
+                : 0;
         }
 
         // Total savings (from discounts in orders)
@@ -158,7 +158,7 @@ class DashboardController extends Controller
         // Also calculate savings from meal discount prices
         $mealSavings = OrderItem::whereHas('order', function ($query) use ($user) {
                 $query->where('user_id', $user->id)
-                      ->where('status', '!=', 'cancelled');
+                    ->where('status', '!=', 'cancelled');
             })
             ->with('meal')
             ->get()
@@ -166,6 +166,7 @@ class DashboardController extends Controller
                 if ($item->meal && $item->meal->discount_price) {
                     return ($item->meal->price - $item->meal->discount_price) * $item->quantity;
                 }
+
                 return 0;
             });
 
@@ -173,6 +174,7 @@ class DashboardController extends Controller
 
         // Average order value
         $averageOrderValue = 0;
+
         if ($ordersCount > 0) {
             $averageOrderValue = (float) ($monthlySpend / $ordersCount);
         }
@@ -195,7 +197,7 @@ class DashboardController extends Controller
     {
         $orderItems = OrderItem::whereHas('order', function ($query) use ($user) {
                 $query->where('user_id', $user->id)
-                      ->where('status', '!=', 'cancelled');
+                    ->where('status', '!=', 'cancelled');
             })
             ->with('meal.category')
             ->get();
@@ -209,7 +211,7 @@ class DashboardController extends Controller
                 $categoryName = $item->meal->category->name;
                 $quantity = $item->quantity;
 
-                if (!isset($categoryTotals[$categoryId])) {
+                if (! isset($categoryTotals[$categoryId])) {
                     $categoryTotals[$categoryId] = [
                         'category_id' => $categoryId,
                         'category_name' => $categoryName,
@@ -224,8 +226,12 @@ class DashboardController extends Controller
 
         // Calculate percentages
         $distribution = [];
+
         foreach ($categoryTotals as $categoryId => $data) {
-            $percentage = $totalItems > 0 ? round(($data['total_quantity'] / $totalItems) * 100, 1) : 0;
+            $percentage = $totalItems > 0
+                ? round(($data['total_quantity'] / $totalItems) * 100, 1)
+                : 0;
+
             $distribution[] = [
                 'category_id' => $data['category_id'],
                 'category_name' => $data['category_name'],
@@ -273,10 +279,14 @@ class DashboardController extends Controller
     {
         $topMeals = OrderItem::whereHas('order', function ($query) use ($user) {
                 $query->where('user_id', $user->id)
-                      ->where('status', '!=', 'cancelled');
+                    ->where('status', '!=', 'cancelled');
             })
             ->with('meal.category', 'meal.subcategory')
-            ->select('meal_id', DB::raw('SUM(quantity) as total_quantity'), DB::raw('SUM(subtotal) as total_spent'))
+            ->select(
+                'meal_id',
+                DB::raw('SUM(quantity) as total_quantity'),
+                DB::raw('SUM(subtotal) as total_spent')
+            )
             ->groupBy('meal_id')
             ->orderBy('total_quantity', 'desc')
             ->limit($limit)
@@ -284,6 +294,7 @@ class DashboardController extends Controller
 
         return $topMeals->map(function ($item) {
             $meal = $item->meal;
+
             return [
                 'meal_id' => $meal?->id,
                 'title' => $meal?->title,
