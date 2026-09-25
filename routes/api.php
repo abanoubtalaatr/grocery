@@ -123,8 +123,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('cart')->group(function () {
         Route::get('/', [CartController::class, 'index']);
         Route::post('/items', [CartController::class, 'addItem']);
-        Route::put('/items/{itemId}', [CartController::class, 'updateItem']);
-        Route::delete('/items/{itemId}', [CartController::class, 'removeItem']);
+        Route::put('/items/{{item}}', [CartController::class, 'updateItem']);
+        Route::delete('/items/{{item}}', [CartController::class, 'removeItem']);
         Route::delete('/clear', [CartController::class, 'clear']);
     });
 

@@ -3,12 +3,14 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Request;
 use Throwable;
 
 class Handler extends ExceptionHandler
 {
     /**
-     * The list of the inputs that are never flashed to the session on validation exceptions.
+     * The list of the inputs that are never flashed to the session
+     * on validation exceptions.
      *
      * @var array<int, string>
      */
@@ -25,6 +27,21 @@ class Handler extends ExceptionHandler
     {
         $this->reportable(function (Throwable $e) {
             //
+        });
+
+        $this->renderable(function (
+            CartOperationException $e,
+            Request $request
+        ) {
+            if (
+                $request->is('api/cart') ||
+                $request->is('api/cart/*')
+            ) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], $e->statusCode());
+            }
         });
     }
 }
