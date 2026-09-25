@@ -3,24 +3,25 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\FaqResource;
 use App\Http\Resources\FaqCollection;
+use App\Http\Resources\FaqResource;
 use App\Models\Faq;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class FaqController extends Controller
 {
     /**
      * Display a listing of the FAQs.
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $query = Faq::query();
 
         // Filter by category
         if ($request->has('category')) {
-            $query->where('category', $request->category);
+            $query->where('category', $request->input('category'));
         }
 
         // Filter active only
@@ -30,7 +31,7 @@ class FaqController extends Controller
 
         // Search in question and answer
         if ($request->has('search')) {
-            $search = $request->search;
+            $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('question', 'LIKE', "%{$search}%")
                     ->orWhere('answer', 'LIKE', "%{$search}%");
@@ -41,7 +42,8 @@ class FaqController extends Controller
         $query->ordered();
 
         // Get categories list
-        if ($request->boolean('with_categories', false)) {
+        $withCategories = $request->boolean('with_categories');
+        if ($withCategories) {
             $categories = Faq::active()
                 ->distinct('category')
                 ->pluck('category')
@@ -49,14 +51,14 @@ class FaqController extends Controller
                 ->values();
         }
 
-        $perPage = $request->get('per_page', 15);
+        $perPage = min(max($request->integer('per_page', 15), 1), 100);
         $faqs = $query->paginate($perPage);
 
         $response = [
             'data' => new FaqCollection($faqs),
         ];
 
-        if ($request->boolean('with_categories', false)) {
+        if ($withCategories) {
             $response['categories'] = $categories;
         }
 
@@ -66,24 +68,16 @@ class FaqController extends Controller
     /**
      * Store a newly created FAQ.
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $data = $request->validate([
             'question' => 'required|string|max:255',
             'answer' => 'required|string',
             'category' => 'nullable|string|max:100',
             'order' => 'nullable|integer',
             'is_active' => 'boolean',
         ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $faq = Faq::create($validator->validated());
+        $faq = Faq::create($data);
 
         return response()->json([
             'message' => 'FAQ created successfully',
@@ -94,7 +88,7 @@ class FaqController extends Controller
     /**
      * Display the specified FAQ.
      */
-    public function show(Faq $faq)
+    public function show(Faq $faq): FaqResource
     {
         return new FaqResource($faq);
     }
@@ -102,24 +96,16 @@ class FaqController extends Controller
     /**
      * Update the specified FAQ.
      */
-    public function update(Request $request, Faq $faq)
+    public function update(Request $request, Faq $faq): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $data = $request->validate([
             'question' => 'sometimes|required|string|max:255',
             'answer' => 'sometimes|required|string',
             'category' => 'nullable|string|max:100',
             'order' => 'nullable|integer',
             'is_active' => 'sometimes|boolean',
         ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $faq->update($validator->validated());
+        $faq->update($data);
 
         return response()->json([
             'message' => 'FAQ updated successfully',
@@ -130,7 +116,7 @@ class FaqController extends Controller
     /**
      * Remove the specified FAQ.
      */
-    public function destroy(Faq $faq)
+    public function destroy(Faq $faq): JsonResponse
     {
         $faq->delete();
 
@@ -142,7 +128,7 @@ class FaqController extends Controller
     /**
      * Get all FAQ categories.
      */
-    public function categories()
+    public function categories(): JsonResponse
     {
         $categories = Faq::active()
             ->distinct('category')
@@ -158,7 +144,7 @@ class FaqController extends Controller
     /**
      * Get FAQs by category.
      */
-    public function byCategory($category)
+    public function byCategory(string $category): AnonymousResourceCollection
     {
         $faqs = Faq::active()
             ->category($category)

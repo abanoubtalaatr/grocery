@@ -45,7 +45,7 @@ class ReviewController extends Controller
         }
         
         // Pagination
-        $perPage = $request->input('per_page', 15);
+        $perPage = min(max($request->integer('per_page', 15), 1), 100);
         $reviews = $query->paginate($perPage);
         
         return response()->json([
@@ -93,7 +93,7 @@ class ReviewController extends Controller
     /**
      * Get single review
      */
-    public function show($id): JsonResponse
+    public function show(string $id): JsonResponse
     {
         $review = Review::with(['user', 'meal'])->findOrFail($id);
         
@@ -106,7 +106,7 @@ class ReviewController extends Controller
     /**
      * Update review (only by owner or admin)
      */
-    public function update(UpdateReviewRequest $request, $id): JsonResponse
+    public function update(UpdateReviewRequest $request, string $id): JsonResponse
     {
         $review = Review::findOrFail($id);
         
@@ -130,7 +130,7 @@ class ReviewController extends Controller
     /**
      * Delete review (only by owner or admin)
      */
-    public function destroy($id): JsonResponse
+    public function destroy(string $id): JsonResponse
     {
         $review = Review::findOrFail($id);
         
@@ -153,7 +153,7 @@ class ReviewController extends Controller
     /**
      * Get reviews for a specific meal
      */
-    public function getMealReviews($mealId, Request $request): JsonResponse
+    public function getMealReviews(string $mealId, Request $request): JsonResponse
     {
         $meal = Meal::findOrFail($mealId);
         
@@ -170,7 +170,7 @@ class ReviewController extends Controller
             'success' => true,
             'meal' => [
                 'id' => $meal->id,
-                'name' => $meal->name,
+                'name' => $meal->title,
                 'average_rating' => round($averageRating, 1),
                 'total_reviews' => $totalReviews,
             ],
@@ -211,7 +211,7 @@ class ReviewController extends Controller
     /**
      * Get review statistics for a meal
      */
-    public function getMealReviewStats($mealId): JsonResponse
+    public function getMealReviewStats(string $mealId): JsonResponse
     {
         $stats = Review::where('meal_id', $mealId)
             ->approved()

@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 
 class PaymentController extends Controller
 {
@@ -15,8 +14,7 @@ class PaymentController extends Controller
      */
     public function paymentHistory(Request $request): JsonResponse
     {
-        try {
-            $user = $request->user();
+        $user = $request->user();
 
             $orders = Order::where('user_id', $user->id)
                 ->where('status', '!=', 'cancelled')
@@ -42,20 +40,13 @@ class PaymentController extends Controller
                 ];
             });
 
-            return response()->json([
+        return response()->json([
                 'success' => true,
                 'message' => 'Payment history retrieved successfully',
                 'data' => $paymentHistory,
                 'total_count' => $paymentHistory->count(),
                 'total_amount' => (float) $orders->sum('total'),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve payment history',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        ]);
     }
 
     /**
@@ -63,8 +54,7 @@ class PaymentController extends Controller
      */
     public function receipt(Request $request, Order $order): JsonResponse
     {
-        try {
-            $user = $request->user();
+        $user = $request->user();
 
             // Verify order belongs to user
             if ($order->user_id !== $user->id) {
@@ -78,18 +68,11 @@ class PaymentController extends Controller
 
             $receipt = $this->formatReceipt($order);
 
-            return response()->json([
+        return response()->json([
                 'success' => true,
                 'message' => 'Receipt retrieved successfully',
                 'data' => $receipt,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve receipt',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        ]);
     }
 
     /**

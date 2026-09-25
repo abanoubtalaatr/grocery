@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Stripe\Stripe;
 use Stripe\Customer;
 use Stripe\SetupIntent;
@@ -12,7 +13,7 @@ use Stripe\PaymentIntent;
 
 class StripeController extends Controller
 {
-    public function createSetupIntent(Request $request)
+    public function createSetupIntent(Request $request): JsonResponse
     {
         Stripe::setApiKey(config('services.stripe.secret'));
         $user = $request->user();
@@ -33,7 +34,7 @@ class StripeController extends Controller
         return response()->json(['clientSecret' => $intent->client_secret]);
     }
 
-    public function listCards(Request $request)
+    public function listCards(Request $request): JsonResponse
     {
         Stripe::setApiKey(config('services.stripe.secret'));
         $user = $request->user();
@@ -49,18 +50,20 @@ class StripeController extends Controller
     }
 
 
-    public function chargeSavedCard(Request $request)
+    public function chargeSavedCard(Request $request): JsonResponse
     {
         $request->validate([
             'payment_method_id' => 'required|string',
-            'amount' => 'required|numeric',
+            'amount' => 'required|numeric|min:0.50',
         ]);
 
         Stripe::setApiKey(config('services.stripe.secret'));
         $user = $request->user();
 
+        abort_if(! $user->stripe_customer_id, 422, 'Stripe customer is not configured.');
+
         $paymentIntent = PaymentIntent::create([
-            'amount' => $request->amount * 100,
+            'amount' => (int) round($request->input('amount') * 100),
             'currency' => 'usd',
             'customer' => $user->stripe_customer_id,
             'payment_method' => $request->payment_method_id,
@@ -71,11 +74,14 @@ class StripeController extends Controller
         return response()->json(['status' => 'success', 'payment_intent' => $paymentIntent]);
     }
 
-    public function deleteCard(Request $request, $id)
+    public function deleteCard(Request $request, string $id): JsonResponse
     {
         Stripe::setApiKey(config('services.stripe.secret'));
 
+        abort_if(! $request->user()->stripe_customer_id, 404, 'Payment method not found.');
+
         $paymentMethod = PaymentMethod::retrieve($id);
+        abort_unless($paymentMethod->customer === $request->user()->stripe_customer_id, 404);
         $paymentMethod->detach();
 
         return response()->json(['status' => 'deleted']);

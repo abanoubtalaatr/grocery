@@ -8,7 +8,6 @@ use App\Models\Order;
 use App\Models\SupportReport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class SupportController extends Controller
 {
@@ -17,23 +16,15 @@ class SupportController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $data = $request->validate([
             'issue_type' => ['required', 'string', 'min:2', 'max:255'],
             'order_number' => ['nullable', 'string', 'max:255'],
             'message' => ['required', 'string', 'min:10', 'max:2000'],
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         $user = $request->user();
-        $orderNumber = $request->filled('order_number')
-            ? trim((string) $request->input('order_number'))
+        $orderNumber = ! empty($data['order_number'])
+            ? trim((string) $data['order_number'])
             : null;
 
         if ($orderNumber !== null && $orderNumber !== '') {
@@ -57,9 +48,9 @@ class SupportController extends Controller
 
         $report = SupportReport::create([
             'user_id' => $user->id,
-            'issue_type' => trim((string) $request->input('issue_type')),
+            'issue_type' => trim((string) $data['issue_type']),
             'order_number' => $orderNumber,
-            'message' => trim((string) $request->input('message')),
+            'message' => trim((string) $data['message']),
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);

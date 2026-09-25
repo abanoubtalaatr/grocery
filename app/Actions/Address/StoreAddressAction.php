@@ -2,27 +2,22 @@
 
 namespace App\Actions\Address;
 
-class StoreAddressAction {
-    
-    public function hanlde($data){
-        $data = $request->validated();
+use App\Models\Address;
+use App\Models\User;
 
-            $user = $request->user();
+class StoreAddressAction
+{
+    public function handle(User $user, array $data): Address
+    {
+        $data['is_default'] = (bool) ($data['is_default'] ?? false)
+            || ! $user->addresses()->exists();
 
+        $phone = trim((string) ($data['phone'] ?? ''));
+        $countryCode = trim((string) ($data['country_code'] ?? ''));
+        if ($countryCode !== '' && str_starts_with($phone, $countryCode)) {
+            $data['phone'] = substr($phone, strlen($countryCode));
+        }
 
-            // If this is the first address, make it default
-            $isFirstAddress = $user->addresses()->count() === 0;
-            $data = array_merge(
-                $validator->validated(),
-                ['is_default' => $request->boolean('is_default') || $isFirstAddress]
-            );
-            // Normalize phone: if phone already starts with country code, store only the national part
-            $phone = trim($data['phone'] ?? '');
-            $code = trim($data['country_code'] ?? '');
-            if ($code !== '' && str_starts_with($phone, $code)) {
-                $data['phone'] = substr($phone, strlen($code));
-            }
-            $address = $user->addresses()->create($data);
-            return $addresss;
+        return $user->addresses()->create($data);
     }
 }

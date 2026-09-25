@@ -14,22 +14,15 @@ class NotificationSettingsController extends Controller
     /**
      * Get user notification settings
      */
-    public function index()
+    public function index(): JsonResponse
     {
-        try {
-            $user = Auth::user();
-            $settings = $user->initializeNotificationSettings();
+        $user = Auth::user();
+        $settings = $user->initializeNotificationSettings();
 
-            return response()->json([
-                'success' => true,
-                'data' => $settings ? $this->formatSettings($settings) : $this->defaultSettingsStructure(),
-            ]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => true,
-                'data' => $this->defaultSettingsStructure(),
-            ]);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => $settings ? $this->formatSettings($settings) : $this->defaultSettingsStructure(),
+        ]);
     }
 
     /**
@@ -133,7 +126,7 @@ class NotificationSettingsController extends Controller
     /**
      * Format settings for response
      */
-    private function formatSettings(UserNotificationSetting $settings)
+    private function formatSettings(UserNotificationSetting $settings): array
     {
         return [
             'order_delivery_updates' => [

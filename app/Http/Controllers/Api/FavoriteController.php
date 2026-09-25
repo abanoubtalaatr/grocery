@@ -7,7 +7,8 @@ use App\Models\Favorite;
 use App\Models\Meal;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Throwable;
 
 class FavoriteController extends Controller
 {
@@ -16,10 +17,7 @@ class FavoriteController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        try {
-            $user = $request->user();
-            
-            $favorites = $user->favorites()
+        $favorites = $request->user()->favorites()
                 ->with(['meal.category', 'meal.subcategory'])
                 ->latest()
                 ->get()
@@ -50,11 +48,11 @@ class FavoriteController extends Controller
                         'is_featured' => $meal->is_featured,
                         
                         // Category & Subcategory
-                        'category' => [
+                        'category' => $meal->category ? [
                             'id' => $meal->category->id,
                             'name' => $meal->category->name,
                             'slug' => $meal->category->slug,
-                        ],
+                        ] : null,
                         'subcategory' => $meal->subcategory ? [
                             'id' => $meal->subcategory->id,
                             'name' => $meal->subcategory->name,
@@ -66,19 +64,12 @@ class FavoriteController extends Controller
                     ];
                 });
 
-            return response()->json([
+        return response()->json([
                 'success' => true,
                 'message' => 'Favorites retrieved successfully',
                 'data' => $favorites,
                 'total_count' => $favorites->count(),
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve favorites',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
     }
 
     /**
@@ -87,48 +78,35 @@ class FavoriteController extends Controller
     public function toggle(Request $request, string $mealId): JsonResponse
     {
         try {
-            $user = $request->user();
             $meal = Meal::findOrFail($mealId);
-
-            DB::beginTransaction();
-
-            $favorite = $user->favorites()->where('meal_id', $meal->id)->first();
+            $favorite = $request->user()->favorites()->where('meal_id', $meal->id)->first();
 
             if ($favorite) {
-                // Remove from favorites
                 $favorite->delete();
                 $isFavorited = false;
-                $message = 'Removed from favorites';
             } else {
-                // Add to favorites
-                $user->favorites()->create([
-                    'meal_id' => $meal->id,
-                ]);
+                $request->user()->favorites()->create(['meal_id' => $meal->id]);
                 $isFavorited = true;
-                $message = 'Added to favorites';
             }
-
-            DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => $message,
+                'message' => $isFavorited ? 'Added to favorites' : 'Removed from favorites',
                 'data' => [
                     'meal_id' => $meal->id,
                     'is_favorited' => $isFavorited,
                 ],
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json([
                 'success' => false,
                 'message' => 'Meal not found',
             ], 404);
-        } catch (\Exception $e) {
-            DB::rollBack();
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to toggle favorite',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -151,16 +129,16 @@ class FavoriteController extends Controller
                     'is_favorited' => $isFavorited,
                 ],
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json([
                 'success' => false,
                 'message' => 'Meal not found',
             ], 404);
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to check favorite status',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -191,16 +169,16 @@ class FavoriteController extends Controller
                     'message' => 'Meal was not in favorites',
                 ], 404);
             }
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException) {
             return response()->json([
                 'success' => false,
                 'message' => 'Meal not found',
             ], 404);
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to remove from favorites',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug') ? $exception->getMessage() : 'Internal server error',
             ], 500);
         }
     }

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\SettingRequest;
 use App\Http\Resources\SettingResource;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class SettingController extends Controller
 {
@@ -25,11 +25,24 @@ class SettingController extends Controller
     /**
      * Update settings
      */
-    public function update( $request): JsonResponse
+    public function update(Request $request): JsonResponse
     {
         $settings = Setting::getSettings();
-        
-        $data = $request->validated();
+
+        $data = $request->validate([
+            'site_name' => ['sometimes', 'string', 'max:255'],
+            'site_description' => ['sometimes', 'nullable', 'string'],
+            'email' => ['sometimes', 'nullable', 'email', 'max:255'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'facebook' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'linkedin' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'instagram' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'twitter' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'copyright_text' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'logo' => ['sometimes', 'nullable', 'image', 'max:2048'],
+            'favicon' => ['sometimes', 'nullable', 'image', 'max:2048'],
+        ]);
         
         // Handle file uploads if needed
         if ($request->hasFile('logo')) {

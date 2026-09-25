@@ -372,21 +372,14 @@ class NotificationController extends Controller
      */
     public function destroyMultiple(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $data = $request->validate([
             'ids' => 'required|array',
             'ids.*' => 'required|string',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         $user = Auth::user();
         $deletedCount = $user->notifications()
-            ->whereIn('id', $request->ids)
+            ->whereIn('id', $data['ids'])
             ->delete();
 
         return response()->json([
@@ -400,19 +393,12 @@ class NotificationController extends Controller
      */
     public function clearAll(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $data = $request->validate([
             'type' => 'sometimes|string|in:read,unread,all',
             'confirmation' => 'required|boolean|accepted',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        if (! $request->confirmation) {
+        if (! $data['confirmation']) {
             return response()->json([
                 'success' => false,
                 'message' => 'Please confirm you want to clear all notifications',
@@ -420,7 +406,7 @@ class NotificationController extends Controller
         }
 
         $user = Auth::user();
-        $type = $request->get('type', 'all');
+        $type = $data['type'] ?? 'all';
 
         switch ($type) {
             case 'read':

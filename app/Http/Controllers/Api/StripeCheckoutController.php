@@ -8,7 +8,6 @@ use App\Models\Order;
 use App\Services\StripeCheckoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Stripe\Checkout\Session;
 use Stripe\Stripe;
 use Throwable;
@@ -59,19 +58,15 @@ class StripeCheckoutController extends Controller
             $pi = $session->payment_intent;
             $paymentIntentId = is_string($pi) ? $pi : ($pi->id ?? null);
 
-            DB::transaction(function () use ($order, $paymentIntentId, $session) {
-                $order->refresh();
-                if ($order->status !== 'awaiting_payment') {
-                    return;
-                }
-
+            $order->refresh();
+            if ($order->status === 'awaiting_payment') {
                 $order->update([
                     'status' => 'placed',
                     'placed_at' => now(),
                     'stripe_payment_intent_id' => $paymentIntentId,
                     'stripe_checkout_session_id' => $session->id,
                 ]);
-            });
+            }
 
             $order->refresh();
         }

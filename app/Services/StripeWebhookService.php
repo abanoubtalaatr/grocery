@@ -7,9 +7,25 @@ use Illuminate\Support\Facades\DB;
 use Stripe\Checkout\Session;
 use Stripe\Event;
 use Stripe\Stripe;
+use Stripe\Webhook;
+use Stripe\Exception\SignatureVerificationException;
+use UnexpectedValueException;
 
 class StripeWebhookService
 {
+    public function handlePayload(string $payload, ?string $signature, string $secret): bool
+    {
+        try {
+            $event = Webhook::constructEvent($payload, $signature ?? '', $secret);
+        } catch (UnexpectedValueException|SignatureVerificationException) {
+            return false;
+        }
+
+        $this->handleEvent($event);
+
+        return true;
+    }
+
     public function handleEvent(Event $event): void
     {
         Stripe::setApiKey(config('services.stripe.secret'));
