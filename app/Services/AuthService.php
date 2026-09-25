@@ -14,12 +14,10 @@ class AuthService
     ) {}
 
     /**
-     * Register a new user
+     * Register a new user.
      */
     public function register(array $data): array
     {
-
-        // Create user
         $user = User::create([
             'username' => $data['username'],
             'email' => $data['email'] ?? null,
@@ -28,12 +26,13 @@ class AuthService
             'agree_terms' => $data['agree_terms'],
         ]);
 
-        // Generate token
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Send welcome notification
         if ($user->email) {
-            $this->notificationService->sendWelcomeEmail($user->email, $user->username);
+            $this->notificationService->sendWelcomeEmail(
+                $user->email,
+                $user->username
+            );
         }
 
         return [
@@ -43,7 +42,7 @@ class AuthService
     }
 
     /**
-     * Login user
+     * Login user.
      */
     public function login(string $identifier, string $password): array
     {
@@ -67,7 +66,6 @@ class AuthService
             ]);
         }
 
-        // Generate token
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return [
@@ -77,65 +75,70 @@ class AuthService
     }
 
     /**
-     * Logout user
+     * Logout user.
      */
     public function logout(User $user): bool
     {
-        // Revoke all tokens for the user
         $user->tokens()->delete();
 
         return true;
     }
 
     /**
-     * Initiate forgot password process
+     * Initiate forgot password process.
      */
     public function forgotPassword(string $identifier): bool
     {
-        // Find user
         $user = User::findByIdentifier($identifier);
 
         if (! $user) {
-            // Don't reveal if user exists or not for security
             throw ValidationException::withMessages([
                 'identifier' => ['User not found.'],
             ]);
         }
 
-        // Generate OTP
-        $otp = $this->otpService->generate($identifier, 'password_reset');
+        $otp = $this->otpService->generate(
+            $identifier,
+            'password_reset'
+        );
 
-        // Send OTP via email or SMS
         if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
-            $this->notificationService->sendOtpEmail($identifier, $otp, 'password_reset');
+            $this->notificationService->sendOtpEmail(
+                $identifier,
+                $otp,
+                'password_reset'
+            );
         } else {
-            $this->notificationService->sendOtpSms($identifier, $otp, 'password_reset');
+            $this->notificationService->sendOtpSms(
+                $identifier,
+                $otp,
+                'password_reset'
+            );
         }
 
         return true;
     }
 
     /**
-     * Verify OTP
+     * Verify OTP.
      */
     public function verifyOtp(string $identifier, string $otp): bool
     {
-        return $this->otpService->verify($identifier, $otp, 'password_reset');
+        return $this->otpService->verify(
+            $identifier,
+            $otp,
+            'password_reset'
+        );
     }
 
     /**
-     * Reset password
+     * Reset password.
      */
-    public function resetPassword(string $identifier, string $otp, string $newPassword): bool
-    {
-        // Verify OTP
-        // if (!$this->otpService->isValid($identifier, $otp, 'password_reset')) {
-        //     throw ValidationException::withMessages([
-        //         'otp' => ['The OTP is invalid or has expired.'],
-        //     ]);
-        // }
-
-        // Find user
+    public function resetPassword(
+        string $identifier,
+        string $otp,
+        string $newPassword
+    ): bool {
         $user = User::findByIdentifier($identifier);
 
         if (! $user) {
@@ -144,28 +147,39 @@ class AuthService
             ]);
         }
 
-        // Update password
         $user->password = Hash::make($newPassword);
         $user->save();
 
-        // Mark OTP as used
-        $this->otpService->verify($identifier, $otp, 'password_reset');
+        $this->otpService->verify(
+            $identifier,
+            $otp,
+            'password_reset'
+        );
 
-        // Revoke all existing tokens
         $user->tokens()->delete();
 
         return true;
     }
 
     /**
-     * Delete user account
+     * Delete user account.
      */
     public function deleteAccount(User $user): bool
     {
         $user->delete();
-
-        // Revoke all tokens for the user
         $user->tokens()->delete();
+
+        return true;
+    }
+
+    /**
+     * Change password for authenticated user.
+     */
+    public function changePassword(User $user, string $password): bool
+    {
+        $user->update([
+            'password' => $password,
+        ]);
 
         return true;
     }
