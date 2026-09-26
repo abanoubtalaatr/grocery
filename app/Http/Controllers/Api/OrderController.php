@@ -55,7 +55,7 @@ class OrderController extends Controller
         );
     }
 
-    public function track(Request $request, GetActiveOrderTrackingAction $action): JsonResponse
+    public function track(Request $request, \App\Actions\Order\GetActiveOrderTrackingAction $action): JsonResponse
     {
         $trackingData = $action->execute($request->user());
 

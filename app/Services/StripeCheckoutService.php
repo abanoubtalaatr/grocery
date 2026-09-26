@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendOrderInvoiceJob;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -86,8 +87,8 @@ class StripeCheckoutService
         if ($order->status === 'awaiting_payment') {
             $pi = $session->payment_intent;
             $paymentIntentId = is_string($pi) ? $pi : ($pi->id ?? null);
-
-            DB::transaction(function () use ($order, $paymentIntentId, $session) {
+$wasUpdated = false;
+            DB::transaction(function () use ($order, $paymentIntentId, $session, &$wasUpdated) {
                 $order->refresh();
                 if ($order->status !== 'awaiting_payment') {
                     return;
@@ -99,9 +100,13 @@ class StripeCheckoutService
                     'stripe_payment_intent_id'   => $paymentIntentId,
                     'stripe_checkout_session_id' => $session->id,
                 ]);
+                $wasUpdated = true;
             });
 
             $order->refresh();
+            if ($wasUpdated) {
+                SendOrderInvoiceJob::dispatch($order);
+            }
         }
 
         return $order;
