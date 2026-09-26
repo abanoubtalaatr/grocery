@@ -22,13 +22,11 @@ class PaymentController extends Controller
     {
         $orders = $action->execute($request->user());
 
-        return response()->json([
-            'success'      => true,
-            'message'      => 'Payment history retrieved successfully',
-            'data'         => PaymentHistoryResource::collection($orders),
+        return $this->successResponse([
+            'payments'     => PaymentHistoryResource::collection($orders),
             'total_count'  => $orders->count(),
             'total_amount' => (float) $orders->sum('total'),
-        ]);
+        ], 'Payment history retrieved successfully');
     }
 
     /**
@@ -36,9 +34,7 @@ class PaymentController extends Controller
      */
     public function receipt(Request $request, Order $order): JsonResponse
     {
-        if ($order->user_id !== $request->user()->id) {
-            return $this->errorResponse('Order not found', 404);
-        }
+        $this->authorize('view', $order);
 
         $order->load(['items.meal.category', 'items.meal.subcategory', 'address', 'user']);
 
