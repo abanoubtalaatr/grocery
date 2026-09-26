@@ -37,12 +37,7 @@ class OrderController extends Controller
      */
     public function sendInvoice(Request $request, Order $order): JsonResponse
     {
-        if ($order->user_id !== $request->user()->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order not found',
-            ], 404);
-        }
+       $this->authorize('sendInvoice', $order);
 
         SendOrderInvoice::dispatch($order);
 
