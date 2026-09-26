@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use App\Traits\ApiResponse;
 use App\Jobs\CallingInventoryJob;
 use App\Jobs\CallingInvoiceJob;
-use App\Jobs\SendEmailJob;
 use App\Models\OrderItem;
 use Illuminate\Http\JsonResponse;
 
@@ -40,7 +39,6 @@ class OrderItemController extends Controller
 
         CallingInventoryJob::dispatch($orderItem);
         CallingInvoiceJob::dispatch($orderItem);
-        SendEmailJob::dispatch($orderItem);
 
         return $this->success($orderItem, 'Order item created successfully.');
     }
