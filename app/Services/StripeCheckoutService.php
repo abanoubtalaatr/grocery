@@ -87,8 +87,8 @@ class StripeCheckoutService
         if ($order->status === 'awaiting_payment') {
             $pi = $session->payment_intent;
             $paymentIntentId = is_string($pi) ? $pi : ($pi->id ?? null);
-$wasUpdated = false;
-            DB::transaction(function () use ($order, $paymentIntentId, $session, &$wasUpdated) {
+
+            DB::transaction(function () use ($order, $paymentIntentId, $session) {
                 $order->refresh();
                 if ($order->status !== 'awaiting_payment') {
                     return;
@@ -104,9 +104,7 @@ $wasUpdated = false;
             });
 
             $order->refresh();
-            if ($wasUpdated) {
-                SendOrderInvoiceJob::dispatch($order);
-            }
+          
         }
 
         return $order;

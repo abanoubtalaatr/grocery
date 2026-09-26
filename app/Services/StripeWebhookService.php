@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendOrderInvoiceJob;
 use App\Models\Order;
 use Illuminate\Support\Facades\DB;
 use Stripe\Checkout\Session;
@@ -48,7 +49,7 @@ class StripeWebhookService
         });
     }
 
-    private function onCheckoutSessionCompleted(Session $session): void
+ private function onCheckoutSessionCompleted(Session $session): void
     {
         if ($session->payment_status !== 'paid') {
             return;
@@ -67,7 +68,9 @@ class StripeWebhookService
             $paymentIntentId = $pi->id;
         }
 
-        DB::transaction(function () use ($order, $paymentIntentId, $session) {
+        $wasUpdated = false;
+
+        DB::transaction(function () use ($order, $paymentIntentId, $session, &$wasUpdated) {
             $order->refresh();
             if ($order->status !== 'awaiting_payment') {
                 return;
@@ -79,7 +82,14 @@ class StripeWebhookService
                 'stripe_payment_intent_id' => $paymentIntentId,
                 'stripe_checkout_session_id' => $session->id,
             ]);
+
+            $wasUpdated = true;
         });
+
+ 
+        if ($wasUpdated) {
+            SendOrderInvoiceJob::dispatch($order);
+        }
     }
 
     private function resolveOrderFromSession(Session $session): ?Order
