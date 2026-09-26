@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use Stripe\Stripe;
+use App\Jobs\SendOrderInvoiceJob;
 use App\Models\Cart;
 use App\Models\Meal;
 use App\Models\Order;
@@ -83,16 +84,16 @@ class OrderController extends Controller
 
             DB::beginTransaction();
 
-            // $paymentResult = match ($validated['payment_method']) {
-            //     'stripe_checkout' => ['success' => true],
-            //     default => $this->processPayment($user, $validated, $total),
-            // };
+            $paymentResult = match ($validated['payment_method']) {
+                'stripe_checkout' => ['success' => true],
+                default => $this->processPayment($user, $validated, $total),
+            };
 
-            // if (! $paymentResult['success']) {
-            //     DB::rollBack();
+            if (! $paymentResult['success']) {
+                DB::rollBack();
 
-            //     return response()->json($paymentResult['response'], 400);
-            // }
+                return response()->json($paymentResult['response'], 400);
+            }
 
             $stripePaymentIntentId = $paymentResult['stripe_payment_intent_id'] ?? null;
 
@@ -123,6 +124,7 @@ class OrderController extends Controller
             DB::commit();
 
             $order->load(['items.meal', 'address']);
+            SendOrderInvoiceJob::dispatch($order->id);
 
             return response()->json([
                 'success' => true,
