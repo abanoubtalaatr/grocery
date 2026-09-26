@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
 use App\Services\ShippingService;
+use App\Jobs\CreateInvoiceJob;
 
 class OrderController extends Controller
 {
@@ -121,6 +122,7 @@ class OrderController extends Controller
                 ]);
             }
             DB::commit();
+            CreateInvoiceJob::dispatch($order->id);
 
             $order->load(['items.meal', 'address']);
 
