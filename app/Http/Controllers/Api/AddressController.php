@@ -2,7 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Address\StoreAddressAction;
+use App\Actions\Address\UpdateAddressAction;
+use App\Filament\Resources\AddressResource;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\Address\StoreAddressRequest;
+use App\Http\Requests\Api\Address\UpdateAddressRequest;
 use App\Models\Address;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +28,7 @@ class AddressController extends Controller
 
         $addresses = $user->addresses()->orderBy('is_default', 'desc')->orderBy('created_at', 'desc')->get();
 
-        return $this->success($addresses);
+        return $this->success(AddressResource::collection($addresses),'successfully');
     }
 
     /**
@@ -33,7 +38,7 @@ class AddressController extends Controller
     {
         $this->authorize('show', $address);
 
-        return $this->success($addresses);
+        return $this->success($address);
     }
 
     /**
@@ -41,19 +46,21 @@ class AddressController extends Controller
      */
     public function store(StoreAddressRequest $request, StoreAddressAction $action): JsonResponse
     { 
-        $addresss = $action->handle($request->validated());
+        $addresss = $action->handle($request,$request);
+               return $this->success(AddressResource::collection($addresss),'successfully');
 
-        return $this->success($addresses);
+
+       
     }
 
     /**
      * Update address
      */
-    public function update(Request $request, Address $address, UpdateAddressAction $action): JsonResponse
+    public function update(UpdateAddressRequest $request , UpdateAddressAction $action): JsonResponse
     {
-        $address = $action->handle($request->validated());
+        $address = $action->excute($request,$request);
 
-        return $this->success($addresses);
+        return $this->success(AddressResource::collection($address),'successfully');
     }
 
     /**
@@ -61,10 +68,12 @@ class AddressController extends Controller
      */
     public function destroy(Request $request, Address $address): JsonResponse
     {
-        $this->authorize('', $address);
-        $address->delete();
+             $this->authorize('delete', $address);
+             $address->delete();
+           return $this->success($address,'successfully delete');
 
-       return $this->success($addresses);   
+
+    
     }
 
 }

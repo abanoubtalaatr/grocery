@@ -46,9 +46,9 @@ class SmartListController extends Controller
         ]);
     }
 
-    public function show(Request $request, $id)
+    public function show(SmartList $smartList)
     {
-        $smartList = SmartList::where('user_id', $request->user()->id)->with('meals')->findOrFail($id);
+        // $smartList = SmartList::where('user_id', $request->user()->id)->with('meals')->findOrFail($id);
         return response()->json([
             'success' => true,
             'message' => 'Smart list retrieved successfully',

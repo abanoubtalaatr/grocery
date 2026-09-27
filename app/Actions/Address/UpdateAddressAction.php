@@ -1,9 +1,9 @@
 <?php 
 namespace App\Actions\Address;
 
-class StoreAddressAction {
+class UpdateAddressAction {
     
-   public function handle($request, $validator)
+   public function excute($request, $validator)
 {
     // يأخذ البيانات بعد التأكد من صحتها عن طريق StoreAddressRequest
     $data = $request->validated();
