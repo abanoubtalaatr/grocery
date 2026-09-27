@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
 use App\Services\ShippingService;
+use App\Jobs\SendOrderInvoice;
 
 class OrderController extends Controller
 {
@@ -31,6 +32,21 @@ class OrderController extends Controller
         ]);
     }
     
+    /**
+     * Queue an invoice email for an order owned by the authenticated user.
+     */
+    public function sendInvoice(Request $request, Order $order): JsonResponse
+    {
+       $this->authorize('sendInvoice', $order);
+
+        SendOrderInvoice::dispatch($order);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Invoice email has been queued successfully',
+        ], 202);
+    }
+
     /**
      * Create a new order.
      */
